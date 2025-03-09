@@ -1,102 +1,132 @@
-const express = require('express');
-const Patient = require('../models/patient');
-const Appointment = require('../models/appointment');
-const MedicalRecord = require('../models/medicalRecord');
+const Patient = require("../models/patient");
+const Appointment = require("../models/appointment");
+const MedicalRecord = require("../models/medicalRecord");
+const AccessLog = require("../models/accessLog");
+const { sendNotification } = require("../utility/mailer");
+const multer = require("multer");
 
-const router = express.Router();
-
-// Search for medical records
-router.get('/medical-records', async (req, res) => {
-    try {
-        const records = await MedicalRecord.find({ patientId: req.user.id });
-        res.json(records);
-    } catch (err) {
-        res.status(500).json({ message: err.message });
-    }
+// Multer Configuration for File Uploads
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, "uploads/medical-records/");
+  },
+  filename: function (req, file, cb) {
+    cb(null, Date.now() + "-" + file.originalname);
+  },
 });
+const upload = multer({ storage });
 
-// Search for appointments
-router.get('/appointments', async (req, res) => {
-    try {
-        const appointments = await Appointment.find({ patientId: req.user.id });
-        res.json(appointments);
-    } catch (err) {
-        res.status(500).json({ message: err.message });
-    }
-});
+// View Patient Profile
+const viewProfile = async (req, res) => {
+  try {
+    const patient = await Patient.findById(req.user.id);
+    res.json(patient);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
 
-// Request an appointment
-router.post('/appointments', async (req, res) => {
-    const { doctorName, hospitalName, date, time, purpose, additionalNotes } = req.body;
-    const appointment = new Appointment({
-        patientId: req.user.id,
-        doctorName,
-        hospitalName,
-        date,
-        time,
-        purpose,
-        additionalNotes
+// Edit Patient Profile
+const updateProfile = async (req, res) => {
+  try {
+    const updatedPatient = await Patient.findByIdAndUpdate(
+      req.user.id,
+      req.body,
+      { new: true }
+    );
+    res.json(updatedPatient);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// View Medical Records
+const getMedicalRecords = async (req, res) => {
+  try {
+    const records = await MedicalRecord.find({ patientId: req.user.id });
+    res.json(records);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Upload Medical Records
+const uploadMedicalRecord = async (req, res) => {
+  try {
+    const newRecord = new MedicalRecord({
+      patientId: req.user.id,
+      fileUrl: `/uploads/medical-records/${req.file.filename}`,
+      category: req.body.category || "General",
     });
 
-    try {
-        const newAppointment = await appointment.save();
-        res.status(201).json(newAppointment);
-    } catch (err) {
-        res.status(400).json({ message: err.message });
-    }
-});
+    await newRecord.save();
+    res.status(201).json(newRecord);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
 
-// View profile
-router.get('/profile', async (req, res) => {
-    try {
-        const patient = await Patient.findById(req.user.id);
-        res.json(patient);
-    } catch (err) {
-        res.status(500).json({ message: err.message });
-    }
-});
+// View Recent Medical Records
+const getRecentMedicalRecords = async (req, res) => {
+  try {
+    const recentRecords = await MedicalRecord.find({ patientId: req.user.id })
+      .sort({ createdAt: -1 })
+      .limit(5);
+    res.json(recentRecords);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
 
-// Edit profile
-router.put('/profile', async (req, res) => {
-    const { firstName, lastName, email, phoneNumber, dateOfBirth, bloodGroup, address, allergies, nextOfKin, notifications } = req.body;
-    try {
-        const patient = await Patient.findById(req.user.id);
-        if (firstName) patient.firstName = firstName;
-        if (lastName) patient.lastName = lastName;
-        if (email) patient.email = email;
-        if (phoneNumber) patient.phoneNumber = phoneNumber;
-        if (dateOfBirth) patient.dateOfBirth = dateOfBirth;
-        if (bloodGroup) patient.bloodGroup = bloodGroup;
-        if (address) patient.address = address;
-        if (allergies) patient.allergies = allergies;
-        if (nextOfKin) patient.nextOfKin = nextOfKin;
-        if (notifications) patient.notifications = notifications;
+// Request an Appointment
+const requestAppointment = async (req, res) => {
+  try {
+    const { doctorName, hospitalName, date, time, purpose, additionalNotes } =
+      req.body;
+    const appointment = new Appointment({
+      patientId: req.user.id,
+      doctorName,
+      hospitalName,
+      date,
+      time,
+      purpose,
+      additionalNotes,
+    });
 
-        const updatedPatient = await patient.save();
-        res.json(updatedPatient);
-    } catch (err) {
-        res.status(400).json({ message: err.message });
-    }
-});
+    await appointment.save();
+    const patient = await Patient.findById(req.user.id);
+    await sendNotification(
+      patient.email,
+      "Appointment Booked",
+      `Your appointment with ${doctorName} at ${hospitalName} is scheduled for ${date} at ${time}.`
+    );
 
-// Show upcoming appointments
-router.get('/appointments/upcoming', async (req, res) => {
-    try {
-        const upcomingAppointments = await Appointment.find({ patientId: req.user.id, date: { $gte: new Date() } });
-        res.json(upcomingAppointments);
-    } catch (err) {
-        res.status(500).json({ message: err.message });
-    }
-});
+    res.status(201).json(appointment);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
 
-// Show recent medical records
-router.get('/medical-records/recent', async (req, res) => {
-    try {
-        const recentRecords = await MedicalRecord.find({ patientId: req.user.id }).sort({ date: -1 }).limit(5);
-        res.json(recentRecords);
-    } catch (err) {
-        res.status(500).json({ message: err.message });
-    }
-});
+// View Upcoming Appointments
+const getUpcomingAppointments = async (req, res) => {
+  try {
+    const upcomingAppointments = await Appointment.find({
+      patientId: req.user.id,
+      date: { $gte: new Date() },
+    });
+    res.json(upcomingAppointments);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
 
-module.exports = router;
+module.exports = {
+  viewProfile,
+  updateProfile,
+  getMedicalRecords,
+  uploadMedicalRecord,
+  getRecentMedicalRecords,
+  requestAppointment,
+  getUpcomingAppointments,
+  upload,
+};
