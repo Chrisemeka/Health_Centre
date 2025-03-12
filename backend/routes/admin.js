@@ -5,8 +5,8 @@ const {
     viewSystemLogs,
     resetUserPassword,
     getNumberOfUsers
-} = require('../controllers/adminController');
-const { authenticateUser } = require('../middlewares/authMiddleware');
+} = require('../controller/admin');
+const { authenticateUser } = require('../middleware/auth');
 
 const router = express.Router();
 

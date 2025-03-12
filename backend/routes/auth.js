@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const authenticateController = require('../controllers/authenticateController');
+const authenticateController = require('../controller/authentication');
 
 /**
  * @swagger
@@ -15,7 +15,7 @@ const authenticateController = require('../controllers/authenticateController');
  *           schema:
  *             type: object
  *             properties:
- *               username:
+ *               name:
  *                 type: string
  *               email:
  *                 type: string
@@ -23,6 +23,10 @@ const authenticateController = require('../controllers/authenticateController');
  *               password:
  *                 type: string
  *                 format: password
+ *               dateOfBirth:
+ *                 type: date
+ *               phone:
+ *                 type: string
  *               role:
  *                 type: string
  *                 enum: [admin, doctor, patient]

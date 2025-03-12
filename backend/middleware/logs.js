@@ -1,4 +1,4 @@
-const AccessLog = require('../models/accessLog');
+const AccessLog = require('../model/accessLog');
 
 // Middleware to log record access
 async function logRecordAccess(req, res, next) {
