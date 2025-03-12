@@ -9,7 +9,17 @@ const swaggerOptions = {
             version: "1.0.0",
             description: "API Documentation for Doctor-Patient Management System"
         },
-        servers: [{ url: "http://localhost:5000" }]
+        servers: [{ url: "http://localhost:5000" }],
+        components: {
+            securitySchemes: {
+                BearerAuth: {
+                    type: 'http',
+                    scheme: 'bearer',
+                    bearerFormat: 'JWT',
+                },
+            },
+        },
+        security: [{ BearerAuth: [] }],
     },
     apis: ['./routes/*.js'],
 };

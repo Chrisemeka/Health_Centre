@@ -1,9 +1,9 @@
-const Doctor = require('../models/doctor');
-const Patient = require('../models/patient');
-const Appointment = require('../models/appointment');
-const MedicalRecord = require('../models/medicalRecord');
-const AccessLog = require('../models/accessLog');
-const { sendOTP } = require('../services/otpService');
+const Doctor = require('../model/doctor');
+const Patient = require('../model/patient');
+const Appointment = require('../model/appointment');
+const MedicalRecord = require('../model/medicalRecords');
+const AccessLog = require('../model/accessLog');
+const { sendOTP } = require('../services/otpServices');
 const { sendNotification } = require('../services/emailService');
 
 // View Patient Records with OTP Protection

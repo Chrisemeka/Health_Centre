@@ -7,8 +7,8 @@ const {
     manageAppointment,
     getTotalPatients,
     getRecentPatientRecords
-} = require('../controllers/doctorController');
-const { authenticateUser } = require('../middlewares/authMiddleware');
+} = require('../controller/doctor');
+const { authenticateUser } = require('../middleware/auth');
 
 const router = express.Router();
 

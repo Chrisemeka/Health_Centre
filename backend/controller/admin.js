@@ -1,6 +1,6 @@
-const User = require('../models/User');
-const SystemSettings = require('../models/SystemSettings');
-const SystemLogs = require('../models/SystemLogs');
+const User = require('../model/patient');
+// const SystemSettings = require('../model/SystemSettings');
+const SystemLogs = require('../model/accessLog');
 const bcrypt = require('bcrypt');
 
 // Create a new user account (Admin creates Doctors, Patients, or Admins)

@@ -1,17 +1,27 @@
 require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
-const patientRoutes = require('./routes/patientRoutes');
-const doctorRoutes = require('./routes/doctorRoutes');
-const adminRoutes = require('./routes/adminRoutes');
+const patientRoutes = require('./routes/patient');
+const doctorRoutes = require('./routes/doctor');
+const adminRoutes = require('./routes/admin');
+const authRoutes = require('./routes/auth');
 const { swaggerDocs, swaggerUi } = require('./swagger');
+const cors = require('cors');
+
 
 const app = express();
 app.use(express.json());
+app.use(cors({
+    origin: '*',
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    credentials: true,
+}));
 
-app.use('/api/patients', patientRoutes);
-app.use('/api/doctors', doctorRoutes);
-app.use('/api/admins', adminRoutes);
+
+app.use('/api/patient', patientRoutes);
+app.use('/api/doctor', doctorRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/auth', authRoutes);
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
 mongoose.connect(process.env.MONGO_URI);

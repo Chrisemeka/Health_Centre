@@ -1,7 +1,7 @@
-const Patient = require("../models/patient");
-const Appointment = require("../models/appointment");
-const MedicalRecord = require("../models/medicalRecord");
-const AccessLog = require("../models/accessLog");
+const Patient = require("../model/patient");
+const Appointment = require("../model/appointment");
+const MedicalRecord = require("../model/medicalRecords");
+const AccessLog = require("../model/accessLog");
 const { sendNotification } = require("../utility/mailer");
 const multer = require("multer");
 

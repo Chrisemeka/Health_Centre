@@ -8,17 +8,17 @@ const {
     requestAppointment,
     getUpcomingAppointments,
     upload
-} = require('../controllers/patientController');
-const { authenticateUser } = require('../middlewares/authMiddleware');
+} = require('../controller/patient');
+const { authenticateUser } = require('../middleware/auth');
 
 const router = express.Router();
 
 /**
  * @swagger
- * /api/patients/profile:
+ * /api/patient/profile:
  *   get:
  *     summary: Get patient profile
- *     tags: [Patients]
+ *     tags: [patient]
  *     security:
  *       - BearerAuth: []
  *     responses:
@@ -29,10 +29,10 @@ router.get('/profile', authenticateUser, viewProfile);
 
 /**
  * @swagger
- * /api/patients/profile:
+ * /api/patient/profile:
  *   put:
  *     summary: Update patient profile
- *     tags: [Patients]
+ *     tags: [patient]
  *     security:
  *       - BearerAuth: []
  *     requestBody:
@@ -42,9 +42,11 @@ router.get('/profile', authenticateUser, viewProfile);
  *           schema:
  *             type: object
  *             properties:
- *               firstName:
+ *               name:
  *                 type: string
- *               lastName:
+ *               phone:
+ *                 type: string
+ *               nextOfKin:
  *                 type: string
  *     responses:
  *       200:
@@ -54,10 +56,10 @@ router.put('/profile', authenticateUser, updateProfile);
 
 /**
  * @swagger
- * /api/patients/medical-records:
+ * /api/patient/medical-records:
  *   get:
  *     summary: View medical records
- *     tags: [Patients]
+ *     tags: [patient]
  *     security:
  *       - BearerAuth: []
  *     responses:
@@ -68,10 +70,10 @@ router.get('/medical-records', authenticateUser, getMedicalRecords);
 
 /**
  * @swagger
- * /api/patients/medical-records/upload:
+ * /api/patient/medical-records/upload:
  *   post:
  *     summary: Upload medical records
- *     tags: [Patients]
+ *     tags: [patient]
  *     security:
  *       - BearerAuth: []
  *     requestBody:
@@ -92,10 +94,10 @@ router.post('/medical-records/upload', authenticateUser, upload.single('medicalF
 
 /**
  * @swagger
- * /api/patients/medical-records/recent:
+ * /api/patient/medical-records/recent:
  *   get:
  *     summary: Get recent medical records
- *     tags: [Patients]
+ *     tags: [patient]
  *     security:
  *       - BearerAuth: []
  *     responses:
@@ -106,10 +108,10 @@ router.get('/medical-records/recent', authenticateUser, getRecentMedicalRecords)
 
 /**
  * @swagger
- * /api/patients/appointments:
+ * /api/patient/appointments:
  *   post:
  *     summary: Request an appointment
- *     tags: [Patients]
+ *     tags: [patient]
  *     security:
  *       - BearerAuth: []
  *     requestBody:
@@ -140,10 +142,10 @@ router.post('/appointments', authenticateUser, requestAppointment);
 
 /**
  * @swagger
- * /api/patients/appointments/upcoming:
+ * /api/patient/appointments/upcoming:
  *   get:
  *     summary: Get upcoming appointments
- *     tags: [Patients]
+ *     tags: [patient]
  *     security:
  *       - BearerAuth: []
  *     responses:
