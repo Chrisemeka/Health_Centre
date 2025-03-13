@@ -8,6 +8,7 @@ const patientSchema = new mongoose.Schema({
     phone: String,
     nextOfKin: String,
     verificationToken: String,
+    role: String,
     verified: { type: Boolean, default: false },
     resetPasswordToken : String,
     medicalRecords: [{ type: mongoose.Schema.Types.ObjectId, ref: 'MedicalRecord' }]
