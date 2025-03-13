@@ -13,6 +13,7 @@ const Register = () => {
     phone: '',
     nextOfKin: '',
     nextOfKinPhone: '',
+    user: 'patient'
   });
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
@@ -113,19 +114,25 @@ const Register = () => {
     setIsLoading(true);
     
     try {
-      // Simulate API call with a timeout
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // In a real app, this would make an API request to register the user
-      
-      // Show success message and redirect to login
-      alert('Registration successful! You can now log in.');
-      navigate('/login');
+      // Make the API call to the registration endpoint
+      const response = await api.post('/api/auth/signup', formData);
+  
+      // Check if the response indicates success (status code 2xx)
+      if (response.status >= 200 && response.status < 300) {
+        // Show success message and redirect to login
+        alert('Registration successful! You can now log in.');
+        // navigate('/login');
+      } else {
+        // Handle unexpected response status
+        throw new Error('Registration failed. Please try again.');
+      }
     } catch (error) {
+      // Handle errors from the API call
       setErrors({
-        general: 'Registration failed. Please try again.',
+        general: error.response?.data?.message || 'Registration failed. Please try again.',
       });
     } finally {
+      // Stop loading indicator
       setIsLoading(false);
     }
   };
