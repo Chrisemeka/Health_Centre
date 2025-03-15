@@ -1,131 +1,174 @@
-const Doctor = require('../model/doctor');
-const Patient = require('../model/patient');
-const Appointment = require('../model/appointment');
-const MedicalRecord = require('../model/medicalRecords');
-const AccessLog = require('../model/accessLog');
-const { sendOTP } = require('../services/otpServices');
-const { sendNotification } = require('../services/emailService');
+const Doctor = require("../model/doctor");
+const Appointment = require("../model/appointment");
+const Patient = require("../model/user"); // Patients are stored in the User model
+const MedicalRecord = require("../model/medicalRecords");
+const { sendEmail } = require("../utility/mailer");
+const OTPService = require("../services/otpServices"); // to generate and verify OTPs
 
-// View Patient Records with OTP Protection
-const viewPatientRecords = async (req, res) => {
-    try {
-        const { doctorId, patientId } = req.params;
-        const doctor = await Doctor.findById(doctorId);
-        const patient = await Patient.findById(patientId).populate('medicalRecords');
+// Get Doctor Profile
+exports.getDoctorProfile = async (req, res) => {
+  try {
+    const doctor = await Doctor.findById(req.user.id);
+    if (!doctor) return res.status(404).json({ message: "Doctor not found" });
 
-        if (!doctor || !patient) {
-            return res.status(404).json({ message: 'Doctor or Patient not found' });
-        }
-
-        if (!doctor.hasAccessToPatient(patientId)) {
-            await sendOTP(patient.email);
-            return res.status(403).json({ message: 'Access denied. OTP sent to patient email.' });
-        }
-
-        // Log doctor access
-        await AccessLog.create({ doctorId, patientId, action: 'Viewed Patient Record' });
-
-        res.json(patient.medicalRecords);
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
+    res.status(200).json(doctor);
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error });
+  }
 };
 
-// Update Patient Records (Doctors must enter a note)
-const updatePatientRecord = async (req, res) => {
-    try {
-        const { recordId } = req.params;
-        const { notes, updates } = req.body;
+// Get All Appointments for a Doctor
+exports.getDoctorAppointments = async (req, res) => {
+  try {
+    const { date, status } = req.query;
+    const query = { doctorId: req.user.id };
 
-        if (!notes) {
-            return res.status(400).json({ message: 'A modification note is required.' });
-        }
+    if (date) query.date = date;
+    if (status) query.status = status;
 
-        const record = await MedicalRecord.findById(recordId);
-        if (!record) return res.status(404).json({ message: "Record not found" });
-
-        // Preserve old versions before modifying
-        record.previousVersions.push({ ...record.toObject(), modifiedAt: new Date() });
-        Object.assign(record, updates);
-        record.notes = notes;
-
-        await record.save();
-        sendNotification(record.patientId.email, "Medical Record Updated", "Your medical record has been updated.");
-
-        res.json(record);
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
+    const appointments = await Appointment.find(query);
+    res.status(200).json(appointments);
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error });
+  }
 };
 
-// Get Pending Appointment Requests
-const getPendingAppointments = async (req, res) => {
-    try {
-        const { doctorId } = req.params;
-        const pendingAppointments = await Appointment.find({ doctorId, status: 'Pending' });
-        res.json(pendingAppointments);
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
+// Get Specific Appointment Details
+exports.getAppointmentById = async (req, res) => {
+  try {
+    const appointment = await Appointment.findById(req.params.id);
+    if (!appointment) return res.status(404).json({ message: "Appointment not found" });
+
+    res.status(200).json(appointment);
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error });
+  }
 };
 
-// Get All Appointments
-const getAllAppointments = async (req, res) => {
-    try {
-        const { doctorId } = req.params;
-        const appointments = await Appointment.find({ doctorId });
-        res.json(appointments);
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
+// Update Appointment Status
+exports.updateAppointmentStatus = async (req, res) => {
+  try {
+    const { status, notes } = req.body;
+    const appointment = await Appointment.findById(req.params.id);
+
+    if (!appointment) return res.status(404).json({ message: "Appointment not found" });
+
+    appointment.status = status;
+    if (notes) appointment.notes = notes;
+    await appointment.save();
+
+    res.status(200).json({ message: "Appointment updated successfully", appointment });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error });
+  }
 };
 
-// Approve or Cancel an Appointment
-const manageAppointment = async (req, res) => {
-    try {
-        const { appointmentId } = req.params;
-        const { status } = req.body;
+// Add Medical Notes to Appointment
+exports.addMedicalNotes = async (req, res) => {
+  try {
+    const { notes } = req.body;
+    const appointment = await Appointment.findById(req.params.id);
 
-        if (!['Approved', 'Cancelled'].includes(status)) {
-            return res.status(400).json({ message: 'Invalid status update.' });
-        }
+    if (!appointment) return res.status(404).json({ message: "Appointment not found" });
 
-        const appointment = await Appointment.findByIdAndUpdate(appointmentId, { status }, { new: true });
+    appointment.medicalNotes = notes;
+    await appointment.save();
 
-        res.json({ message: `Appointment ${status.toLowerCase()} successfully`, appointment });
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
+    res.status(200).json({ message: "Medical notes added", appointment });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error });
+  }
 };
 
-// Get Total Patients Count for Doctor
-const getTotalPatients = async (req, res) => {
-    try {
-        const { doctorId } = req.params;
-        const totalPatients = await Patient.countDocuments({ doctorId });
-        res.json({ totalPatients });
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
+// Search for Patients
+exports.searchPatients = async (req, res) => {
+  try {
+    const { query } = req.query;
+    const patients = await Patient.find({
+      userType: "patient",
+      $or: [
+        { firstName: { $regex: query, $options: "i" } },
+        { lastName: { $regex: query, $options: "i" } },
+        { email: { $regex: query, $options: "i" } },
+      ],
+    });
+
+    res.status(200).json(patients);
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error });
+  }
 };
 
-// Get Recent Patient Records
-const getRecentPatientRecords = async (req, res) => {
-    try {
-        const { doctorId } = req.params;
-        const recentRecords = await MedicalRecord.find({ doctorId }).sort({ createdAt: -1 }).limit(5);
-        res.json(recentRecords);
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
+// Request OTP to Access Patient Records
+exports.requestPatientOTP = async (req, res) => {
+  try {
+    const patient = await Patient.findById(req.params.patientId);
+    if (!patient) return res.status(404).json({ message: "Patient not found" });
+
+    const otp = OTPService.generateOTP();
+    await OTPService.storeOTP(patient.email, otp);
+    await sendEmail(patient.email, "OTP for Record Access", `Your OTP: ${otp}`);
+
+    res.status(200).json({ message: "OTP sent to patient email" });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error });
+  }
 };
 
-module.exports = {
-    viewPatientRecords,
-    updatePatientRecord,
-    getPendingAppointments,
-    getAllAppointments,
-    manageAppointment,
-    getTotalPatients,
-    getRecentPatientRecords
+// Get Patient Medical Records (With OTP Authentication)
+exports.getPatientRecords = async (req, res) => {
+  try {
+    const { otp } = req.body;
+    const patient = await Patient.findById(req.params.patientId);
+    if (!patient) return res.status(404).json({ message: "Patient not found" });
+
+    // Verify OTP
+    const isOTPValid = await OTPService.verifyOTP(patient.email, otp);
+    if (!isOTPValid) return res.status(401).json({ message: "Invalid OTP" });
+
+    const records = await MedicalRecord.find({ patientId: req.params.patientId });
+    res.status(200).json(records);
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error });
+  }
+};
+
+// Add Medical Record (With OTP Authentication)
+exports.addMedicalRecord = async (req, res) => {
+  try {
+    const { otp, type, summary, details } = req.body;
+    const patient = await Patient.findById(req.params.patientId);
+    if (!patient) return res.status(404).json({ message: "Patient not found" });
+
+    // Verify OTP
+    const isOTPValid = await OTPService.verifyOTP(patient.email, otp);
+    if (!isOTPValid) return res.status(401).json({ message: "Invalid OTP" });
+
+    const newRecord = new MedicalRecord({ patientId: req.params.patientId, type, summary, details });
+    await newRecord.save();
+
+    res.status(201).json({ message: "Medical record added", record: newRecord });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error });
+  }
+};
+
+// Get Specific Medical Record (With OTP Authentication)
+exports.getMedicalRecordById = async (req, res) => {
+  try {
+    const { otp } = req.body;
+    const patient = await Patient.findById(req.params.patientId);
+    if (!patient) return res.status(404).json({ message: "Patient not found" });
+
+    // Verify OTP
+    const isOTPValid = await OTPService.verifyOTP(patient.email, otp);
+    if (!isOTPValid) return res.status(401).json({ message: "Invalid OTP" });
+
+    const record = await MedicalRecord.findById(req.params.recordId);
+    if (!record) return res.status(404).json({ message: "Medical record not found" });
+
+    res.status(200).json(record);
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error });
+  }
 };

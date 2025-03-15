@@ -1,132 +1,104 @@
-const Patient = require("../model/patient");
+const User = require("../model/user");
+const jwt = require("jsonwebtoken");
+const bcrypt = require("bcryptjs");
+const crypto = require("crypto");
+const {sendEmail} = require("../services/emailService");
 const Appointment = require("../model/appointment");
-const MedicalRecord = require("../model/medicalRecords");
-const AccessLog = require("../model/accessLog");
-const { sendNotification } = require("../utility/mailer");
-const multer = require("multer");
+const Hospital = require("../model/hospital");
 
-// Multer Configuration for File Uploads
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, "uploads/medical-records/");
-  },
-  filename: function (req, file, cb) {
-    cb(null, Date.now() + "-" + file.originalname);
-  },
-});
-const upload = multer({ storage });
+// Generate JWT Token
+const generateToken = (user) => {
+  return jwt.sign({ id: user._id, role: user.userType }, process.env.JWT_SECRET, { expiresIn: "1h" });
+};
 
-// View Patient Profile
-const viewProfile = async (req, res) => {
+// Patient Registration
+exports.registerPatient = async (req, res) => {
+  console.log(req.body)
   try {
-    const patient = await Patient.findById(req.user.id);
-    res.json(patient);
+    const userExists = await User.findOne({ email: req.body.email });
+    console.log(req.body.email)
+    console.log(userExists)
+    if (userExists) return res.status(400).json({ message: "User already exists" });
+    const verificationToken = crypto.randomBytes(20).toString("hex");
+
+    const newUser = new User({ ...req.body, verificationToken, verified: false });
+    await newUser.save();
+
+    const verificationUrl = `${req.protocol}://${req.get("host")}/api/patient/verify-email/${verificationToken}`;
+    await sendEmail(newUser.email, "Verify Your Email", `Click to verify: ${verificationUrl}`);
+
+    res.status(201).json({ message: "Patient registered successfully. Please verify your email." });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ message: "Server error", error });
+    console.log(error)
   }
 };
 
-// Edit Patient Profile
-const updateProfile = async (req, res) => {
+// Verify Email
+exports.verifyEmail = async (req, res) => {
   try {
-    const updatedPatient = await Patient.findByIdAndUpdate(
-      req.user.id,
-      req.body,
-      { new: true }
-    );
-    res.json(updatedPatient);
+    const user = await User.findOne({ verificationToken: req.params.token });
+
+    if (!user) return res.status(400).json({ message: "Invalid or expired token" });
+
+    user.verified = true;
+    user.verificationToken = undefined;
+    await user.save();
+
+    res.json({ message: "Email verified successfully" });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ message: "Server error", error });
   }
 };
 
-// View Medical Records
-const getMedicalRecords = async (req, res) => {
+// Patient Login
+exports.login = async (req, res) => {
   try {
-    const records = await MedicalRecord.find({ patientId: req.user.id });
-    res.json(records);
+    const { email, password } = req.body;
+
+    const user = await User.findOne({ email });
+    if (!user || user.userType !== "patient") return res.status(400).json({ message: "Invalid credentials" });
+
+    if (!user.verified) return res.status(403).json({ message: "Please verify your email first" });
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) return res.status(400).json({ message: "Invalid credentials" });
+
+    await sendEmail(user.email, "Login Notification", "You have logged into your account.");
+
+    res.status(200).json({ token: generateToken(user), user });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ message: "Server error", error });
   }
 };
 
-// Upload Medical Records
-const uploadMedicalRecord = async (req, res) => {
+// Book Appointment
+exports.bookAppointment = async (req, res) => {
   try {
-    const newRecord = new MedicalRecord({
-      patientId: req.user.id,
-      fileUrl: `/uploads/medical-records/${req.file.filename}`,
-      category: req.body.category || "General",
-    });
-
-    await newRecord.save();
-    res.status(201).json(newRecord);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-// View Recent Medical Records
-const getRecentMedicalRecords = async (req, res) => {
-  try {
-    const recentRecords = await MedicalRecord.find({ patientId: req.user.id })
-      .sort({ createdAt: -1 })
-      .limit(5);
-    res.json(recentRecords);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-// Request an Appointment
-const requestAppointment = async (req, res) => {
-  try {
-    const { doctorName, hospitalName, date, time, purpose, additionalNotes } =
-      req.body;
-    const appointment = new Appointment({
-      patientId: req.user.id,
-      doctorName,
-      hospitalName,
-      date,
-      time,
-      purpose,
-      additionalNotes,
-    });
-
+    const appointment = new Appointment({ patientId: req.user.id, ...req.body });
     await appointment.save();
-    const patient = await Patient.findById(req.user.id);
-    await sendNotification(
-      patient.email,
-      "Appointment Booked",
-      `Your appointment with ${doctorName} at ${hospitalName} is scheduled for ${date} at ${time}.`
-    );
-
-    res.status(201).json(appointment);
+    res.status(201).json({ message: "Appointment booked successfully", appointment });
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    res.status(500).json({ message: "Server error", error });
   }
 };
 
-// View Upcoming Appointments
-const getUpcomingAppointments = async (req, res) => {
+// View Appointments
+exports.viewAppointments = async (req, res) => {
   try {
-    const upcomingAppointments = await Appointment.find({
-      patientId: req.user.id,
-      date: { $gte: new Date() },
-    });
-    res.json(upcomingAppointments);
+    const appointments = await Appointment.find({ patientId: req.user.id });
+    res.status(200).json(appointments);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ message: "Server error", error });
   }
 };
 
-module.exports = {
-  viewProfile,
-  updateProfile,
-  getMedicalRecords,
-  uploadMedicalRecord,
-  getRecentMedicalRecords,
-  requestAppointment,
-  getUpcomingAppointments,
-  upload,
+// Get List of Active Hospitals
+exports.getHospitals = async (req, res) => {
+  try {
+    const hospitals = await Hospital.find({ status: "Active" });
+    res.status(200).json(hospitals);
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error });
+  }
 };

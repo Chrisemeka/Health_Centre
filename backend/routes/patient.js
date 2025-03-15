@@ -1,40 +1,29 @@
-const express = require('express');
+const express = require("express");
 const {
-    viewProfile,
-    updateProfile,
-    getMedicalRecords,
-    uploadMedicalRecord,
-    getRecentMedicalRecords,
-    requestAppointment,
-    getUpcomingAppointments,
-    upload
-} = require('../controller/patient');
-const { authenticateUser } = require('../middleware/auth');
+  registerPatient,
+  verifyEmail,
+  login,
+  bookAppointment,
+  viewAppointments,
+  getHospitals,
+} = require("../controller/patient");
+const { protect } = require("../middleware/auth");
 
 const router = express.Router();
 
 /**
  * @swagger
- * /api/patient/profile:
- *   get:
- *     summary: Get patient profile
- *     tags: [patient]
- *     security:
- *       - BearerAuth: []
- *     responses:
- *       200:
- *         description: Patient profile retrieved successfully
+ * tags:
+ *   name: Patients
+ *   description: API routes for patient management
  */
-router.get('/profile', authenticateUser, viewProfile);
 
 /**
  * @swagger
- * /api/patient/profile:
- *   put:
- *     summary: Update patient profile
- *     tags: [patient]
- *     security:
- *       - BearerAuth: []
+ * /api/patient/register:
+ *   post:
+ *     summary: Register a new patient
+ *     tags: [Patients]
  *     requestBody:
  *       required: true
  *       content:
@@ -42,76 +31,97 @@ router.get('/profile', authenticateUser, viewProfile);
  *           schema:
  *             type: object
  *             properties:
- *               name:
+ *               firstName:
  *                 type: string
+ *               lastName:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               password:
+ *                 type: string
+ *                 format: password
+ *               dateOfBirth:
+ *                 type: string
+ *                 format: date
+ *               gender:
+ *                 type: string
+ *                 enum: [Male, Female, Other]
  *               phone:
+ *                 type: string
+ *               address:
+ *                 type: string
+ *               bloodType:
+ *                 type: string
+ *               allergies:
  *                 type: string
  *               nextOfKin:
  *                 type: string
+ *               nextOfKinRelation:
+ *                 type: string
+ *               nextOfKinPhone:
+ *                 type: string
  *     responses:
- *       200:
- *         description: Profile updated successfully
+ *       201:
+ *         description: Patient registered successfully. Please verify your email.
  */
-router.put('/profile', authenticateUser, updateProfile);
+router.post("/register", registerPatient);
 
 /**
  * @swagger
- * /api/patient/medical-records:
+ * /api/patient/verify-email/{token}:
  *   get:
- *     summary: View medical records
- *     tags: [patient]
- *     security:
- *       - BearerAuth: []
+ *     summary: Verify patient's email address
+ *     tags: [Patients]
+ *     parameters:
+ *       - in: path
+ *         name: token
+ *         required: true
+ *         schema:
+ *           type: string
  *     responses:
  *       200:
- *         description: List of patient medical records
+ *         description: Email verified successfully.
+ *       400:
+ *         description: Invalid or expired token.
  */
-router.get('/medical-records', authenticateUser, getMedicalRecords);
+router.get("/verify-email/:token", verifyEmail);
 
 /**
  * @swagger
- * /api/patient/medical-records/upload:
+ * /api/patient/login:
  *   post:
- *     summary: Upload medical records
- *     tags: [patient]
- *     security:
- *       - BearerAuth: []
+ *     summary: Patient login
+ *     tags: [Patients]
  *     requestBody:
  *       required: true
  *       content:
- *         multipart/form-data:
+ *         application/json:
  *           schema:
  *             type: object
  *             properties:
- *               medicalFile:
+ *               email:
  *                 type: string
- *                 format: binary
- *     responses:
- *       201:
- *         description: Medical record uploaded successfully
- */
-router.post('/medical-records/upload', authenticateUser, upload.single('medicalFile'), uploadMedicalRecord);
-
-/**
- * @swagger
- * /api/patient/medical-records/recent:
- *   get:
- *     summary: Get recent medical records
- *     tags: [patient]
- *     security:
- *       - BearerAuth: []
+ *                 format: email
+ *               password:
+ *                 type: string
+ *                 format: password
  *     responses:
  *       200:
- *         description: List of recent medical records
+ *         description: Login successful. Returns JWT token.
+ *       400:
+ *         description: Invalid credentials.
+ *       403:
+ *         description: Please verify your email first.
  */
-router.get('/medical-records/recent', authenticateUser, getRecentMedicalRecords);
+router.post("/login", login);
 
 /**
  * @swagger
  * /api/patient/appointments:
  *   post:
- *     summary: Request an appointment
- *     tags: [patient]
+ *     summary: Book an appointment
+ *     tags: [Patients]
  *     security:
  *       - BearerAuth: []
  *     requestBody:
@@ -121,9 +131,9 @@ router.get('/medical-records/recent', authenticateUser, getRecentMedicalRecords)
  *           schema:
  *             type: object
  *             properties:
- *               doctorName:
+ *               doctorId:
  *                 type: string
- *               hospitalName:
+ *               hospitalId:
  *                 type: string
  *               date:
  *                 type: string
@@ -132,26 +142,38 @@ router.get('/medical-records/recent', authenticateUser, getRecentMedicalRecords)
  *                 type: string
  *               purpose:
  *                 type: string
- *               additionalNotes:
+ *               notes:
  *                 type: string
  *     responses:
  *       201:
- *         description: Appointment requested successfully
+ *         description: Appointment booked successfully.
  */
-router.post('/appointments', authenticateUser, requestAppointment);
+router.post("/appointments", protect, bookAppointment);
 
 /**
  * @swagger
- * /api/patient/appointments/upcoming:
+ * /api/patient/appointments:
  *   get:
- *     summary: Get upcoming appointments
- *     tags: [patient]
+ *     summary: View all appointments of a patient
+ *     tags: [Patients]
  *     security:
  *       - BearerAuth: []
  *     responses:
  *       200:
- *         description: List of upcoming appointments
+ *         description: List of patient appointments.
  */
-router.get('/appointments/upcoming', authenticateUser, getUpcomingAppointments);
+router.get("/appointments", protect, viewAppointments);
+
+/**
+ * @swagger
+ * /api/patient/hospitals:
+ *   get:
+ *     summary: Get a list of active hospitals
+ *     tags: [Patients]
+ *     responses:
+ *       200:
+ *         description: Returns a list of active hospitals.
+ */
+router.get("/hospitals", getHospitals);
 
 module.exports = router;

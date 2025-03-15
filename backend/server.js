@@ -3,6 +3,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const patientRoutes = require('./routes/patient');
 const doctorRoutes = require('./routes/doctor');
+const hospitalRoutes = require('./routes/hospital');
 const adminRoutes = require('./routes/admin');
 const authRoutes = require('./routes/auth');
 const { swaggerDocs, swaggerUi } = require('./swagger');
@@ -20,6 +21,7 @@ app.use(cors({
 
 app.use('/api/patient', patientRoutes);
 app.use('/api/doctor', doctorRoutes);
+app.use('/api/hospitals', hospitalRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));

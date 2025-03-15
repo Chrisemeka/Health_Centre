@@ -1,7 +1,7 @@
 const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
-const User = require("../model/patient");
-const { sendNotification } = require("../services/emailService");
+const User = require("../model/user");
+const {sendEmail} = require("../services/emailService");
 const generateToken  = require("../utility/generateToken");
 
 
@@ -9,13 +9,13 @@ const generateToken  = require("../utility/generateToken");
 // Sign Up (User Registration)
 exports.signup = async (req, res) => {
   try {
-    const { username, email, password, role } = req.body;
+    const { firstName, lastName, email, password, role } = req.body;
 
     let user = await User.findOne({ email });
     if (user) return res.status(400).json({ message: "User already exists" });
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    user = new User({ username, email, password: hashedPassword, role, verified: false });
+    user = new User({ firstName, lastName, email, password: hashedPassword, role, verified: false });
 
     // Generate Email Verification Token
     const verificationToken = crypto.randomBytes(20).toString("hex");
@@ -24,8 +24,8 @@ exports.signup = async (req, res) => {
     await user.save();
 
     // Send Verification Email
-    // const verificationUrl = `${req.protocol}://${req.get("host")}/api/auth/verify-email/${verificationToken}`;
-    // await sendNotification(email, "Verify Your Account", `Click here to verify: ${verificationUrl}`);
+    const verificationUrl = `${req.protocol}://${req.get("host")}/api/auth/verify-email/${verificationToken}`;
+    await sendEmail(email, "Verify Your Account", `Click here to verify: ${verificationUrl}`);
 
     res.status(201).json({ message: "User created. Please verify your email.", user });
   } catch (error) {

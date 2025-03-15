@@ -1,79 +1,54 @@
-const User = require('../model/patient');
-// const SystemSettings = require('../model/SystemSettings');
-const SystemLogs = require('../model/accessLog');
-const bcrypt = require('bcrypt');
+const Hospital = require("../model/hospital");
+const Doctor = require("../model/doctor");
+const User = require("../model/user");
 
-// Create a new user account (Admin creates Doctors, Patients, or Admins)
-const createUser = async (req, res) => {
-    try {
-        const { name, email, password, role } = req.body;
-        if (!name || !email || !password || !role) {
-            return res.status(400).json({ message: "All fields are required." });
-        }
+// Register a hospital (Only Admins can register)
+exports.registerHospital = async (req, res) => {
+  try {
+    const hospitalExists = await Hospital.findOne({ email: req.body.email });
+    if (hospitalExists) return res.status(400).json({ message: "Hospital already exists" });
 
-        // Hash password before saving
-        const hashedPassword = await bcrypt.hash(password, 10);
-        const user = new User({ name, email, password: hashedPassword, role });
+    const newHospital = new Hospital(req.body);
+    await newHospital.save();
 
-        await user.save();
-        res.status(201).json({ message: "User created successfully", user });
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
+    res.status(201).json({ message: "Hospital registered successfully", hospitalId: newHospital._id });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error });
+  }
 };
 
-// Manage system settings (Only one settings document should exist)
-const updateSystemSettings = async (req, res) => {
-    try {
-        const settings = await SystemSettings.findOneAndUpdate({}, req.body, { new: true, upsert: true });
-        res.status(200).json({ message: "System settings updated", settings });
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
+// Get all hospitals
+exports.getAllHospitals = async (req, res) => {
+  try {
+    const hospitals = await Hospital.find({ status: "Active" });
+    res.status(200).json(hospitals);
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error });
+  }
 };
 
-// View system logs
-const viewSystemLogs = async (req, res) => {
-    try {
-        const logs = await SystemLogs.find().sort({ createdAt: -1 }).limit(100); // Limit logs for performance
-        res.status(200).json(logs);
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
+// Get specific hospital details
+exports.getHospitalById = async (req, res) => {
+  try {
+    const hospital = await Hospital.findById(req.params.id);
+    if (!hospital) return res.status(404).json({ message: "Hospital not found" });
+
+    res.status(200).json(hospital);
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error });
+  }
 };
 
-// Reset user password
-const resetUserPassword = async (req, res) => {
-    try {
-        const user = await User.findById(req.params.userId);
-        if (!user) {
-            return res.status(404).json({ message: 'User not found' });
-        }
+// Get hospital stats (Doctors & Patients count)
+exports.getHospitalStats = async (req, res) => {
+  try {
+    const { id } = req.params;
 
-        const hashedPassword = await bcrypt.hash(req.body.password, 10);
-        user.password = hashedPassword;
-        await user.save();
+    const numDoctors = await Doctor.countDocuments({ hospitalId: id });
+    const numPatients = await User.countDocuments({ hospitalId: id, userType: "patient" });
 
-        res.status(200).json({ message: 'Password reset successfully' });
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
-};
-
-// Get number of users
-const getNumberOfUsers = async (req, res) => {
-    try {
-        const userCount = await User.countDocuments();
-        res.status(200).json({ userCount });
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
-};
-
-module.exports = {
-    createUser,
-    updateSystemSettings,
-    viewSystemLogs,
-    resetUserPassword,
-    getNumberOfUsers
+    res.status(200).json({ numDoctors, numPatients });
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error });
+  }
 };

@@ -1,20 +1,26 @@
-const express = require('express');
+const express = require("express");
 const {
-    createUser,
-    updateSystemSettings,
-    viewSystemLogs,
-    resetUserPassword,
-    getNumberOfUsers
-} = require('../controller/admin');
-const { authenticateUser } = require('../middleware/auth');
+  registerHospital,
+  getAllHospitals,
+  getHospitalById,
+  getHospitalStats,
+} = require("../controller/admin");
+const { protect } = require("../middleware/auth"); // Ensure authentication middleware is used
 
 const router = express.Router();
 
 /**
  * @swagger
- * /api/admin/users:
+ * tags:
+ *   name: Admin
+ *   description: API routes for admin management
+ */
+
+/**
+ * @swagger
+ * /api/admin/hospitals:
  *   post:
- *     summary: Create a new user account (Doctor, Patient, Admin)
+ *     summary: Register a new hospital
  *     tags: [Admin]
  *     security:
  *       - BearerAuth: []
@@ -30,99 +36,83 @@ const router = express.Router();
  *               email:
  *                 type: string
  *                 format: email
- *               password:
+ *               phone:
  *                 type: string
- *                 format: password
- *               role:
+ *               address:
  *                 type: string
- *                 enum: [admin, doctor, patient]
+ *               city:
+ *                 type: string
+ *               state:
+ *                 type: string
+ *               country:
+ *                 type: string
+ *               adminName:
+ *                 type: string
+ *               adminEmail:
+ *                 type: string
+ *                 format: email
+ *               adminPhone:
+ *                 type: string
  *     responses:
  *       201:
- *         description: User created successfully
+ *         description: Hospital registered successfully.
  */
-router.post('/users', authenticateUser, createUser);
+router.post("/hospitals", protect, registerHospital);
 
 /**
  * @swagger
- * /api/admin/system-settings:
- *   put:
- *     summary: Update system settings
- *     tags: [Admin]
- *     security:
- *       - BearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               maintenanceMode:
- *                 type: boolean
- *               maxUsers:
- *                 type: integer
- *     responses:
- *       200:
- *         description: System settings updated successfully
- */
-router.put('/system-settings', authenticateUser, updateSystemSettings);
-
-/**
- * @swagger
- * /api/admin/system-logs:
+ * /api/admin/hospitals:
  *   get:
- *     summary: View system logs
+ *     summary: Get a list of all active hospitals
  *     tags: [Admin]
  *     security:
  *       - BearerAuth: []
  *     responses:
  *       200:
- *         description: List of recent system logs
+ *         description: List of active hospitals retrieved successfully.
  */
-router.get('/system-logs', authenticateUser, viewSystemLogs);
+router.get("/hospitals", protect, getAllHospitals);
 
 /**
  * @swagger
- * /api/admin/users/{userId}/reset-password:
- *   put:
- *     summary: Reset user password
+ * /api/admin/hospitals/{id}:
+ *   get:
+ *     summary: Get specific hospital details
  *     tags: [Admin]
  *     security:
  *       - BearerAuth: []
  *     parameters:
  *       - in: path
- *         name: userId
+ *         name: id
  *         required: true
  *         schema:
  *           type: string
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               password:
- *                 type: string
- *                 format: password
  *     responses:
  *       200:
- *         description: Password reset successfully
+ *         description: Hospital details retrieved successfully.
+ *       404:
+ *         description: Hospital not found.
  */
-router.put('/users/:userId/reset-password', authenticateUser, resetUserPassword);
+router.get("/hospitals/:id", protect, getHospitalById);
 
 /**
  * @swagger
- * /api/admin/users/count:
+ * /api/admin/hospitals/{id}/stats:
  *   get:
- *     summary: Get total number of users
+ *     summary: Get hospital statistics (Doctors & Patients count)
  *     tags: [Admin]
  *     security:
  *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
  *     responses:
  *       200:
- *         description: Total number of users
+ *         description: Hospital statistics retrieved successfully.
  */
-router.get('/users/count', authenticateUser, getNumberOfUsers);
+router.get("/hospitals/:id/stats", protect, getHospitalStats);
 
 module.exports = router;
