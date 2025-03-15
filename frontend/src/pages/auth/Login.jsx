@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import api from '../../api';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -40,47 +41,55 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+  
     const formErrors = validateForm();
     if (Object.keys(formErrors).length > 0) {
       setErrors(formErrors);
       return;
     }
-    
+  
     setIsLoading(true);
-    
+  
     try {
-      // Simulate API call with a timeout
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Mock login logic - in a real app, this would call an API
-      const userData = {
-        id: '1',
-        name: 'John Doe',
-        email: formData.email,
-        role: 'patient', // This would come from the backend in a real app
-      };
-      
-      // Mock login function
-      localStorage.setItem('user', JSON.stringify(userData));
-      
-      // Redirect based on user role
-      switch (userData.role) {
-        case 'admin':
-          navigate('/admin/dashboard');
-          break;
-        case 'doctor':
-          navigate('/doctor/dashboard');
-          break;
-        case 'patient':
-          navigate('/patient/dashboard');
-          break;
-        default:
-          navigate('/');
+      // Make the API call to the login endpoint
+      const response = await api.post('/api/auth/login', formData);
+  
+      // Check if the response indicates success (status code 2xx)
+      if (response.status >= 200 && response.status < 300) {
+        // Extract user data and token from the response
+        const { user, token } = response.data;
+  
+        // Save the token in localStorage (or cookies) for future authenticated requests
+        localStorage.setItem('accessToken', token);
+  
+        // Save user data in localStorage (optional, depending on your app's needs)
+        localStorage.setItem('user', JSON.stringify(user));
+  
+        // Redirect based on user role
+        switch (user.role) {
+          case 'admin':
+            console.log('admin logged in')
+            // navigate('/admin/dashboard');
+            break;
+          case 'doctor':
+            console.log('doctor logged in')
+            // navigate('/doctor/dashboard');
+            break;
+          case 'patient':
+            console.log('patient logged in')
+            // navigate('/patient/dashboard');
+            break;
+          default:
+            navigate('/');
+        }
+      } else {
+        // Handle unexpected response status
+        throw new Error('Login failed. Please check your credentials.');
       }
     } catch (error) {
+      console.error('Login error:', error);
       setErrors({
-        general: 'Login failed. Please check your credentials.',
+        general: error.response?.data?.message || 'Login failed. Please check your credentials.',
       });
     } finally {
       setIsLoading(false);
