@@ -15,7 +15,11 @@ const UserSchema = new mongoose.Schema({
   nextOfKin: { type: String, required: false },
   nextOfKinRelation: { type: String, required: false },
   nextOfKinPhone: { type: String, required: false },
-  userType: { type: String, default: "patient" },
+  userType: {
+    type: String,
+    enum: ["patient", "admin", "doctor", "superAdmin"],
+    default: "patient",
+  },
   verified: { type: Boolean, default: false },
   verificationToken: { type: String },
 });

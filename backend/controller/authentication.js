@@ -55,19 +55,46 @@ exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
+    // Basic check
+    if (!email || !password) {
+      return res.status(400).json({ message: 'Email and password required' });
+    }
+
+    // Find user by email
     const user = await User.findOne({ email });
-    if (!user) return res.status(400).json({ message: "Invalid credentials" });
+    if (!user) {
+      return res.status(400).json({ message: 'Invalid credentials' });
+    }
 
-    if (!user.verified) return res.status(403).json({ message: "Please verify your email first" });
+    // Check if email is verified (if you require it)
+    if (!user.verified) {
+      return res.status(403).json({ message: 'Please verify your email first' });
+    }
 
+    // Compare password
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(400).json({ message: "Invalid credentials" });
+    if (!isMatch) {
+      return res.status(400).json({ message: 'Invalid password' });
+    }
 
-    const token = generateToken(user);
+    // Generate a token (JWT example). Replace 'secretKey' with your real secret
+    // or import a generateToken helper that does this.
+    const token = generateToken(user)
 
-    res.status(200).json({ message: "Login successful", token, user });
+    return res.status(200).json({
+      message: 'Login successful',
+      token,
+      user: {
+        id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        userType: user.userType
+      }
+    });
   } catch (error) {
-    res.status(500).json({ message: "Server error", error: error.message });
+    console.error(error);
+    return res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 

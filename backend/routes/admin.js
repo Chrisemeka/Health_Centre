@@ -6,6 +6,7 @@ const {
   getHospitalStats,
 } = require("../controller/admin");
 const { protect } = require("../middleware/auth"); // Ensure authentication middleware is used
+const roleMiddleware = require("../middleware/role");
 
 const router = express.Router();
 
@@ -57,7 +58,7 @@ const router = express.Router();
  *       201:
  *         description: Hospital registered successfully.
  */
-router.post("/hospitals", protect, registerHospital);
+router.post("/hospitals", protect, roleMiddleware('admin'), registerHospital);
 
 /**
  * @swagger
@@ -113,6 +114,6 @@ router.get("/hospitals/:id", protect, getHospitalById);
  *       200:
  *         description: Hospital statistics retrieved successfully.
  */
-router.get("/hospitals/:id/stats", protect, getHospitalStats);
+router.get("/hospitals/:id/stats", protect,roleMiddleware('admin'), getHospitalStats);
 
 module.exports = router;
