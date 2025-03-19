@@ -64,24 +64,26 @@ const Login = () => {
   
         // Save user data in localStorage (optional, depending on your app's needs)
         localStorage.setItem('user', JSON.stringify(user));
+
+        console.log(user)
   
         // Redirect based on user role
-        switch (user.role) {
-          case 'admin':
-            console.log('admin logged in')
-            // navigate('/admin/dashboard');
-            break;
-          case 'doctor':
-            console.log('doctor logged in')
-            // navigate('/doctor/dashboard');
-            break;
-          case 'patient':
-            console.log('patient logged in')
-            // navigate('/patient/dashboard');
-            break;
-          default:
-            navigate('/');
-        }
+        // switch (user.role) {
+        //   case 'admin':
+        //     console.log('admin logged in')
+        //     navigate('/admin/dashboard');
+        //     break;
+        //   case 'doctor':
+        //     console.log('doctor logged in')
+        //     navigate('/doctor/dashboard');
+        //     break;
+        //   case 'patient':
+        //     console.log('patient logged in')
+        //     navigate('/patient/dashboard');
+        //     break;
+        //   default:
+        //     navigate('/');
+        // }
       } else {
         // Handle unexpected response status
         throw new Error('Login failed. Please check your credentials.');

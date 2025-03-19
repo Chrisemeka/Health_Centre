@@ -14,7 +14,7 @@ const Register = () => {
     phone: '',
     nextOfKin: '',
     nextOfKinPhone: '',
-    user: 'patient'
+    role: 'patient'
   });
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);

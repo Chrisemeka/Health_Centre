@@ -20,6 +20,10 @@ const DoctorDashboard = () => {
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [isRescheduleModalOpen, setIsRescheduleModalOpen] = useState(false);
+  const [isOtpModalOpen, setIsOtpModalOpen] = useState(false);
+  const [selectedPatientId, setSelectedPatientId] = useState(null);
+  const [otpValue, setOtpValue] = useState('');
+  const [otpError, setOtpError] = useState('');
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   
   // Reschedule form state
@@ -205,6 +209,31 @@ const DoctorDashboard = () => {
         ...formErrors,
         [name]: ''
       });
+    }
+  };
+
+  const handleViewRecords = (patientId) => {
+    setSelectedPatientId(patientId);
+    setOtpValue('');
+    setOtpError('');
+    setIsOtpModalOpen(true);
+  };
+
+  const handleOtpSubmit = () => {
+    // Check if OTP is valid (for demo, we'll use "123456" as the valid OTP)
+    if (otpValue === "123456") {
+      setIsOtpModalOpen(false);
+      // Navigate to patient records
+      window.location.href = `/doctor/patient-records?id=${selectedPatientId}`;
+    } else {
+      setOtpError('Invalid OTP. Please try again.');
+    }
+  };
+
+  const handleOtpChange = (e) => {
+    setOtpValue(e.target.value);
+    if (otpError) {
+      setOtpError('');
     }
   };
 
@@ -450,11 +479,13 @@ const DoctorDashboard = () => {
                         >
                           View
                         </button>
-                        <Link to={`/doctor/patient-records?id=${appointment.patientId}`}>
-                          <button className="px-4 py-2 text-sm font-medium text-teal-600 bg-teal-50 rounded-md hover:bg-teal-100">
-                            Records
-                          </button>
-                        </Link>
+                        <button
+                          onClick={() => handleViewRecords(appointment.patientId)}
+                          className="px-4 py-2 text-sm font-medium text-teal-600 bg-teal-50 rounded-md hover:bg-teal-100"
+                        >
+                          Records
+                        </button>
+                        
                       </div>
                     </td>
                   </tr>
@@ -589,11 +620,12 @@ const DoctorDashboard = () => {
                   </div>
                   
                   <div className="pt-4 border-t border-gray-200 flex space-x-3">
-                    <Link to={`/doctor/patient-records?id=${selectedAppointment.patientId}`}>
-                      <button className="px-4 py-2 text-sm font-medium text-white bg-teal-600 rounded-md hover:bg-teal-700">
-                        View Patient Records
-                      </button>
-                    </Link>
+                  <button
+                    onClick={() => handleViewRecords(appointment.patientId)}
+                    className="px-4 py-2 text-sm font-medium text-teal-600 bg-teal-50 rounded-md hover:bg-teal-100"
+                  >
+                    Records
+                  </button>
                     
                     {selectedAppointment.status === 'Confirmed' && (
                       <button className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700">

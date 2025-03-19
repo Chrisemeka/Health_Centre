@@ -1,18 +1,15 @@
 import { Outlet } from 'react-router-dom';
 import Sidebar from '../../components/common/Sidebar';
 import Header from '../../components/common/Header';
-// import { useAuth } from '../contexts/AuthContext';
 
-const AdminLayout = () => {
+const SuperAdminLayout = () => {
 //   const { logout } = useAuth();
   
   const sidebarItems = [
-    { label: 'Dashboard', path: '/admin/dashboard', icon: 'dashboard' },
-    { label: 'Users', path: '/admin/create-user', icon: 'user' },
-    // { label: 'Patients', path: '/admin/patients', icon: 'users' },
-    // { label: 'Appointments', path: '/admin/appointments', icon: 'calendar' },
-    { label: 'Reports', path: '/admin/system-logs', icon: 'clipboard-list' },
-    // { label: 'Settings', path: '/admin/settings', icon: 'cog' },
+    { label: 'Dashboard', path: '/superadmin/dashboard', icon: 'dashboard' },
+    { label: 'Hospitals', path: '/superadmin/hospitals', icon: 'dashboard' },
+    // { label: 'System Logs', path: '/superadmin/system-logs', icon: 'clipboard-list' },
+    // { label: 'Settings', path: '/superadmin/settings', icon: 'cog' },
   ];
 
   return (
@@ -20,7 +17,7 @@ const AdminLayout = () => {
       <Sidebar items={sidebarItems} />
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header 
-          userType="Hospital Admin" 
+          userType="Super Admin" 
         //   onLogout={logout}
           showProfileLink={false}
         />
@@ -32,4 +29,4 @@ const AdminLayout = () => {
   );
 };
 
-export default AdminLayout;
+export default SuperAdminLayout;
