@@ -17,11 +17,13 @@ const router = express.Router();
  *   description: API routes for admin management
  */
 
+
+
 /**
  * @swagger
  * /api/admin/hospitals:
  *   post:
- *     summary: Register a new hospital
+ *     summary: Register a new hospital (Admin Only)
  *     tags: [Admin]
  *     security:
  *       - BearerAuth: []
@@ -37,6 +39,9 @@ const router = express.Router();
  *               email:
  *                 type: string
  *                 format: email
+ *               password:
+ *                 type: string
+ *                 format: password
  *               phone:
  *                 type: string
  *               address:
@@ -58,7 +63,10 @@ const router = express.Router();
  *       201:
  *         description: Hospital registered successfully.
  */
-router.post("/hospitals", protect, roleMiddleware('admin'), registerHospital);
+router.post("/hospitals", roleMiddleware("admin"), registerHospital);
+
+
+
 
 /**
  * @swagger

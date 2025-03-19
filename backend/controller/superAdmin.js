@@ -1,6 +1,8 @@
 // controllers/superAdminController.js
 const bcrypt = require('bcrypt');
 const user = require('../model/user');
+const { sendEmail } = require('../services/emailService');
+const crypto = require("crypto");
 
 // Creates a new admin user (must be superadmin to do this)
 exports.createAdmin = async (req, res) => {
@@ -20,17 +22,13 @@ exports.createAdmin = async (req, res) => {
       return res.status(400).json({ error: 'Email is already in use' });
     }
 
-    // Since the User model has a "pre('save')" hook that hashes the password,
-    // you can simply assign it here. No need to re-hash manually (unless you prefer).
-    const newUser = new user({
-      firstName,
-      lastName,
-      email,
-      password,
-      userType: 'admin'  // Mark this user as admin
-    });
-
-    await newUser.save();
+    
+        const verificationToken = crypto.randomBytes(20).toString("hex");
+    
+        const newUser = new user({ ...req.body,  userType: "admin", verificationToken, verified: false });
+        await newUser.save();
+    const verificationUrl = `${req.protocol}://${req.get("host")}/api/patient/verify-email/${verificationToken}`;
+    await sendEmail(newUser.email, "Verify Your Email", `Click to verify: ${verificationUrl}`);
 
     return res.status(201).json({
       message: 'New admin created successfully',

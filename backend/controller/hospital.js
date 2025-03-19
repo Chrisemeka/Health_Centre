@@ -1,5 +1,44 @@
 const Doctor = require("../model/doctor");
 
+
+exports.hospitalLogin = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    // Find hospital by email
+    const hospital = await hospital.findOne({ email });
+    if (!hospital) {
+      return res.status(400).json({ error: "Invalid email or password" });
+    }
+
+    // Compare password
+    const isMatch = await bcrypt.compare(password, hospital.password);
+    if (!isMatch) {
+      return res.status(400).json({ error: "Invalid email or password" });
+    }
+
+    // Generate JWT token
+    const token = jwt.sign({ id: hospital._id, role: "hospital" }, process.env.JWT_SECRET, { expiresIn: "1d" });
+
+    res.status(200).json({ message: "Login successful", token, hospital });
+  } catch (error) {
+    res.status(500).json({ error: "Internal server error", details: error.message });
+  }
+};
+
+// 🔹 Get Hospital Profile (Protected Route)
+exports.getHospitalProfile = async (req, res) => {
+  try {
+    const hospital = await hospital.findById(req.user.id).select("-password");
+    if (!hospital) {
+      return res.status(404).json({ error: "Hospital not found" });
+    }
+
+    res.status(200).json({ hospital });
+  } catch (error) {
+    res.status(500).json({ error: "Internal server error", details: error.message });
+  }
+};
 // Create a new doctor in the hospital
 exports.createDoctor = async (req, res) => {
   try {

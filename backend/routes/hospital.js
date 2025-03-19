@@ -7,7 +7,7 @@ const {
   changeDoctorStatus,
 } = require("../controller/hospital");
 
-const { protect } = require("../middleware/auth"); // Protect hospital routes
+const roleMiddleware = require("../middleware/role");
 
 const router = express.Router();
 
@@ -55,7 +55,7 @@ const router = express.Router();
  *       201:
  *         description: Doctor created successfully.
  */
-router.post("/doctors", protect, createDoctor);
+router.post("/doctors", roleMiddleware("hospital"), createDoctor);
 
 /**
  * @swagger
@@ -69,7 +69,7 @@ router.post("/doctors", protect, createDoctor);
  *       200:
  *         description: List of doctors in the hospital.
  */
-router.get("/doctors", protect, getAllDoctors);
+router.get("/doctors", roleMiddleware("hospital"), getAllDoctors);
 
 /**
  * @swagger
@@ -90,7 +90,7 @@ router.get("/doctors", protect, getAllDoctors);
  *       200:
  *         description: Doctor details retrieved successfully.
  */
-router.get("/doctors/:id", protect, getDoctorById);
+router.get("/doctors/:id", roleMiddleware("hospital"), getDoctorById);
 
 /**
  * @swagger
@@ -133,7 +133,7 @@ router.get("/doctors/:id", protect, getDoctorById);
  *       200:
  *         description: Doctor updated successfully.
  */
-router.put("/doctors/:id", protect, updateDoctor);
+router.put("/doctors/:id", roleMiddleware("hospital"), updateDoctor);
 
 /**
  * @swagger
@@ -164,6 +164,6 @@ router.put("/doctors/:id", protect, updateDoctor);
  *       200:
  *         description: Doctor status updated successfully.
  */
-router.patch("/doctors/:id/status", protect, changeDoctorStatus);
+router.patch("/doctors/:id/status", roleMiddleware("hospital"), changeDoctorStatus);
 
 module.exports = router;
