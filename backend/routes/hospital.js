@@ -5,6 +5,7 @@ const {
   getDoctorById,
   updateDoctor,
   changeDoctorStatus,
+  hospitalLogin,
 } = require("../controller/hospital");
 
 const roleMiddleware = require("../middleware/role");
@@ -56,6 +57,33 @@ const router = express.Router();
  *         description: Doctor created successfully.
  */
 router.post("/doctors", roleMiddleware("hospital"), createDoctor);
+
+/**
+ * @swagger
+ * /api/hospitals/login:
+ *   post:
+ *     summary: Login hospital account
+ *     tags: [Hospitals]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Login successful.
+ */
+router.post("/login", hospitalLogin);
+
+
+
 
 /**
  * @swagger
