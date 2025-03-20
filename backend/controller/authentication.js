@@ -20,7 +20,6 @@ exports.signup = async (req, res) => {
     // Generate Email Verification Token
     const verificationToken = crypto.randomBytes(20).toString("hex");
     user.verificationToken = verificationToken;
-    console.log(verificationToken)
     await user.save();
 
     // Send Verification Email
@@ -111,8 +110,7 @@ exports.forgotPassword = async (req, res) => {
     await user.save();
 
     const resetUrl = `${req.protocol}://${req.get("host")}/api/auth/reset-password/${resetToken}`;
-    // await sendNotification(user.email, "Password Reset", `Click here to reset: ${resetUrl}`);
-    console.log(resetUrl)
+    // await sendNotification(user.email, "Password Reset", `Click here to reset: ${resetUrl}`)
     res.json({ message: "Password reset link sent to email" });
   } catch (error) {
     res.status(500).json({ message: "Server error", error: error.message });

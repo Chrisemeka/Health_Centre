@@ -100,7 +100,7 @@ router.post("/login", hospitalLogin);
  *       200:
  *         description: List of doctors in the hospital.
  */
-router.get("/doctors", roleMiddleware("hospital"), getAllDoctors);
+router.get("/doctors", getAllDoctors);
 
 /**
  * @swagger

@@ -6,6 +6,7 @@ const {
   bookAppointment,
   viewAppointments,
   getHospitals,
+  getAllDoctors,
 } = require("../controller/patient");
 const { protect } = require("../middleware/auth");
 
@@ -175,5 +176,18 @@ router.get("/appointments", protect, viewAppointments);
  *         description: Returns a list of active hospitals.
  */
 router.get("/hospitals", getHospitals);
+
+
+/**
+ * @swagger
+ * /api/patient/doctor:
+ *   get:
+ *     summary: Get a list of active doctors
+ *     tags: [Patients]
+ *     responses:
+ *       200:
+ *         description: Returns a list of active doctors.
+ */
+router.get("/doctor", getAllDoctors);
 
 module.exports = router;

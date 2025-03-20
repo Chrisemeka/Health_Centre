@@ -11,7 +11,6 @@ const roleMiddleware = (requiredRole) => {
         try {
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
             req.user = decoded;
-            console.log(req.user)
             if (req.user.role !== requiredRole) {
                 return res.status(403).send({ error: 'Access denied. Insufficient permissions.' });
             }

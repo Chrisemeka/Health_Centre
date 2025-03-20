@@ -1,12 +1,11 @@
 const Appointment = require("../model/appointment");
 const Patient = require("../model/user"); // Patients are stored in the User model
 const MedicalRecord = require("../model/medicalRecords");
-const { sendEmail } = require("../utility/mailer");
+const {sendEmail} = require("../services/emailService");
 const OTPService = require("../services/otpServices");
 const doctor = require("../model/doctor");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-
 
 exports.doctorLogin = async (req, res) => {
   try {
@@ -69,8 +68,9 @@ exports.getDoctorAppointments = async (req, res) => {
 // Get Specific Appointment Details
 exports.getAppointmentById = async (req, res) => {
   try {
-    const appointment = await Appointment.findById(req.params.id);
-    if (!appointment) return res.status(404).json({ message: "Appointment not found" });
+    const appointment = await Appointment.findById(req.params.appointmentId);
+    if (!appointment)
+      return res.status(404).json({ message: "Appointment not found" });
 
     res.status(200).json(appointment);
   } catch (error) {
@@ -82,15 +82,18 @@ exports.getAppointmentById = async (req, res) => {
 exports.updateAppointmentStatus = async (req, res) => {
   try {
     const { status, notes } = req.body;
-    const appointment = await Appointment.findById(req.params.id);
+    const appointment = await Appointment.findById(req.params.appointmentId);
 
-    if (!appointment) return res.status(404).json({ message: "Appointment not found" });
+    if (!appointment)
+      return res.status(404).json({ message: "Appointment not found" });
 
     appointment.status = status;
     if (notes) appointment.notes = notes;
     await appointment.save();
 
-    res.status(200).json({ message: "Appointment updated successfully", appointment });
+    res
+      .status(200)
+      .json({ message: "Appointment updated successfully", appointment });
   } catch (error) {
     res.status(500).json({ message: "Server error", error });
   }
@@ -100,9 +103,10 @@ exports.updateAppointmentStatus = async (req, res) => {
 exports.addMedicalNotes = async (req, res) => {
   try {
     const { notes } = req.body;
-    const appointment = await Appointment.findById(req.params.id);
+    const appointment = await Appointment.findById(req.params.appointmentId);
 
-    if (!appointment) return res.status(404).json({ message: "Appointment not found" });
+    if (!appointment)
+      return res.status(404).json({ message: "Appointment not found" });
 
     appointment.medicalNotes = notes;
     await appointment.save();
@@ -159,7 +163,9 @@ exports.getPatientRecords = async (req, res) => {
     const isOTPValid = await OTPService.verifyOTP(patient.email, otp);
     if (!isOTPValid) return res.status(401).json({ message: "Invalid OTP" });
 
-    const records = await MedicalRecord.find({ patientId: req.params.patientId });
+    const records = await MedicalRecord.find({
+      patientId: req.params.patientId,
+    });
     res.status(200).json(records);
   } catch (error) {
     res.status(500).json({ message: "Server error", error });
@@ -177,10 +183,17 @@ exports.addMedicalRecord = async (req, res) => {
     const isOTPValid = await OTPService.verifyOTP(patient.email, otp);
     if (!isOTPValid) return res.status(401).json({ message: "Invalid OTP" });
 
-    const newRecord = new MedicalRecord({ patientId: req.params.patientId, type, summary, details });
+    const newRecord = new MedicalRecord({
+      patientId: req.params.patientId,
+      type,
+      summary,
+      details,
+    });
     await newRecord.save();
 
-    res.status(201).json({ message: "Medical record added", record: newRecord });
+    res
+      .status(201)
+      .json({ message: "Medical record added", record: newRecord });
   } catch (error) {
     res.status(500).json({ message: "Server error", error });
   }
@@ -198,7 +211,8 @@ exports.getMedicalRecordById = async (req, res) => {
     if (!isOTPValid) return res.status(401).json({ message: "Invalid OTP" });
 
     const record = await MedicalRecord.findById(req.params.recordId);
-    if (!record) return res.status(404).json({ message: "Medical record not found" });
+    if (!record)
+      return res.status(404).json({ message: "Medical record not found" });
 
     res.status(200).json(record);
   } catch (error) {

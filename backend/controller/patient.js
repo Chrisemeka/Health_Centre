@@ -5,6 +5,7 @@ const crypto = require("crypto");
 const {sendEmail} = require("../services/emailService");
 const Appointment = require("../model/appointment");
 const Hospital = require("../model/hospital");
+const doctor = require("../model/doctor");
 
 // Generate JWT Token
 const generateToken = (user) => {
@@ -13,11 +14,8 @@ const generateToken = (user) => {
 
 // Patient Registration
 exports.registerPatient = async (req, res) => {
-  console.log(req.body)
   try {
     const userExists = await User.findOne({ email: req.body.email });
-    console.log(req.body.email)
-    console.log(userExists)
     if (userExists) return res.status(400).json({ message: "User already exists" });
     const verificationToken = crypto.randomBytes(20).toString("hex");
 
@@ -98,6 +96,16 @@ exports.getHospitals = async (req, res) => {
   try {
     const hospitals = await Hospital.find({ status: "Active" });
     res.status(200).json(hospitals);
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error });
+  }
+};
+
+
+exports.getAllDoctors = async (req, res) => {
+  try {
+    const doctors = await doctor.find({ status: "Active" });
+    res.status(200).json(doctors);
   } catch (error) {
     res.status(500).json({ message: "Server error", error });
   }

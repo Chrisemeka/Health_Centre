@@ -4,20 +4,15 @@ const jwt = require("jsonwebtoken");
 const doctor = require("../model/doctor");
 
 exports.hospitalLogin = async (req, res) => {
-  console.log('in here')
   try {
     const { email, password } = req.body;
-    console.log({email, password})
     // Find hospital by email
     const hos = await hospital.findOne({ email });
     if (!hos) {
       return res.status(400).json({ error: "Invalid email or password" });
     }
     
-    // Compare password
-    console.log(hos.password)
     const isMatch = await bcrypt.compare(password, hos.password);
-    console.log(isMatch)
     if (!isMatch) {
       return res.status(400).json({ error: "Invalid email or password" });
     }
@@ -82,7 +77,6 @@ exports.getAllDoctors = async (req, res) => {
 exports.getDoctorById = async (req, res) => {
   try {
     const doctors = await doctor.findById(req.params.id);
-    console.log(doctors);
     if (!doctors) return res.status(404).json({ message: "Doctor not found" });
 
     res.status(200).json(doctors);
