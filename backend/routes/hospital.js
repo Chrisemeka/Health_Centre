@@ -41,6 +41,9 @@ const router = express.Router();
  *               email:
  *                 type: string
  *                 format: email
+ *               password:
+ *                 type: string
+ *                 format: docPassword
  *               specialty:
  *                 type: string
  *               phone:

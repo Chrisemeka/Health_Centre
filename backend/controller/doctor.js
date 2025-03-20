@@ -1,17 +1,50 @@
-const Doctor = require("../model/doctor");
 const Appointment = require("../model/appointment");
 const Patient = require("../model/user"); // Patients are stored in the User model
 const MedicalRecord = require("../model/medicalRecords");
 const { sendEmail } = require("../utility/mailer");
-const OTPService = require("../services/otpServices"); // to generate and verify OTPs
+const OTPService = require("../services/otpServices");
+const doctor = require("../model/doctor");
+const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
 
+
+exports.doctorLogin = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    // Find hospital by email
+    const doc = await doctor.findOne({ email });
+    if (!doc) {
+      return res.status(400).json({ error: "Invalid email or password" });
+    }
+
+    // Compare password
+    const isMatch = await bcrypt.compare(password, doc.password);
+    if (!isMatch) {
+      return res.status(400).json({ error: "Invalid email or password" });
+    }
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { id: doc._id, role: "doctor" },
+      process.env.JWT_SECRET,
+      { expiresIn: "1d" }
+    );
+
+    res.status(200).json({ message: "Login successful", token, doc });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ error: "Internal server error", details: error.message });
+  }
+};
 // Get Doctor Profile
 exports.getDoctorProfile = async (req, res) => {
   try {
-    const doctor = await Doctor.findById(req.user.id);
-    if (!doctor) return res.status(404).json({ message: "Doctor not found" });
+    const doc = await doctor.findById(req.user.id);
+    if (!doc) return res.status(404).json({ message: "Doctor not found" });
 
-    res.status(200).json(doctor);
+    res.status(200).json(doc);
   } catch (error) {
     res.status(500).json({ message: "Server error", error });
   }

@@ -1,5 +1,6 @@
 const express = require("express");
 const {
+  doctorLogin,
   getDoctorProfile,
   getDoctorAppointments,
   getAppointmentById,
@@ -13,6 +14,7 @@ const {
 } = require("../controller/doctor");
 
 const { protect } = require("../middleware/auth");
+const roleMiddleware = require("../middleware/role");
 
 const router = express.Router();
 
@@ -22,10 +24,34 @@ const router = express.Router();
  *   name: Doctors
  *   description: API routes for doctor management
  */
+/**
+ * @swagger
+ * /api/doctor/login:
+ *   post:
+ *     summary: Login Doctor account
+ *     tags: [Doctors]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Login successful.
+ */
+router.post("/login", doctorLogin);
+
 
 /**
  * @swagger
- * /api/doctors/profile:
+ * /api/doctor/profile:
  *   get:
  *     summary: Get doctor profile
  *     tags: [Doctors]
@@ -35,11 +61,11 @@ const router = express.Router();
  *       200:
  *         description: Doctor profile retrieved successfully.
  */
-router.get("/profile", protect, getDoctorProfile);
+router.get("/profile", roleMiddleware('doctor'), getDoctorProfile);
 
 /**
  * @swagger
- * /api/doctors/appointments:
+ * /api/doctor/appointments:
  *   get:
  *     summary: Get all appointments for a doctor
  *     tags: [Doctors]
@@ -62,11 +88,11 @@ router.get("/profile", protect, getDoctorProfile);
  *       200:
  *         description: List of doctor appointments.
  */
-router.get("/appointments", protect, getDoctorAppointments);
+router.get("/appointments", roleMiddleware('doctor'), getDoctorAppointments);
 
 /**
  * @swagger
- * /api/doctors/appointments/{appointmentId}:
+ * /api/doctor/appointments/{appointmentId}:
  *   get:
  *     summary: Get specific appointment details
  *     tags: [Doctors]
@@ -83,11 +109,11 @@ router.get("/appointments", protect, getDoctorAppointments);
  *       200:
  *         description: Appointment details retrieved successfully.
  */
-router.get("/appointments/:appointmentId", protect, getAppointmentById);
+router.get("/appointments/:appointmentId", roleMiddleware('doctor'), getAppointmentById);
 
 /**
  * @swagger
- * /api/doctors/appointments/{appointmentId}/status:
+ * /api/doctor/appointments/{appointmentId}/status:
  *   patch:
  *     summary: Update appointment status
  *     tags: [Doctors]
@@ -116,11 +142,11 @@ router.get("/appointments/:appointmentId", protect, getAppointmentById);
  *       200:
  *         description: Appointment updated successfully.
  */
-router.patch("/appointments/:appointmentId/status", protect, updateAppointmentStatus);
+router.patch("/appointments/:appointmentId/status", roleMiddleware('doctor'), updateAppointmentStatus);
 
 /**
  * @swagger
- * /api/doctors/appointments/{appointmentId}/notes:
+ * /api/doctor/appointments/{appointmentId}/notes:
  *   post:
  *     summary: Add medical notes to an appointment
  *     tags: [Doctors]
@@ -146,11 +172,11 @@ router.patch("/appointments/:appointmentId/status", protect, updateAppointmentSt
  *       200:
  *         description: Medical notes added successfully.
  */
-router.post("/appointments/:appointmentId/notes", protect, addMedicalNotes);
+router.post("/appointments/:appointmentId/notes", roleMiddleware('doctor'), addMedicalNotes);
 
 /**
  * @swagger
- * /api/doctors/patients/search:
+ * /api/doctor/patients/search:
  *   get:
  *     summary: Search for patients
  *     tags: [Doctors]
@@ -166,11 +192,11 @@ router.post("/appointments/:appointmentId/notes", protect, addMedicalNotes);
  *       200:
  *         description: List of matching patients.
  */
-router.get("/patients/search", protect, searchPatients);
+router.get("/patients/search", roleMiddleware('doctor'), searchPatients);
 
 /**
  * @swagger
- * /api/doctors/patients/{patientId}/request-otp:
+ * /api/doctor/patients/{patientId}/request-otp:
  *   post:
  *     summary: Request OTP for accessing patient records
  *     tags: [Doctors]
@@ -187,11 +213,11 @@ router.get("/patients/search", protect, searchPatients);
  *       200:
  *         description: OTP sent to patient email.
  */
-router.post("/patients/:patientId/request-otp", protect, requestPatientOTP);
+router.post("/patients/:patientId/request-otp", roleMiddleware('doctor'), requestPatientOTP);
 
 /**
  * @swagger
- * /api/doctors/patients/{patientId}/records:
+ * /api/doctor/patients/{patientId}/records:
  *   post:
  *     summary: Get patient medical records (Requires OTP)
  *     tags: [Doctors]
@@ -218,11 +244,11 @@ router.post("/patients/:patientId/request-otp", protect, requestPatientOTP);
  *       200:
  *         description: List of patient medical records.
  */
-router.post("/patients/:patientId/records", protect, getPatientRecords);
+router.post("/patients/:patientId/records", roleMiddleware('doctor'), getPatientRecords);
 
 /**
  * @swagger
- * /api/doctors/patients/{patientId}/records/add:
+ * /api/doctor/patients/{patientId}/records/add:
  *   post:
  *     summary: Add a medical record for a patient (Requires OTP)
  *     tags: [Doctors]
@@ -256,11 +282,11 @@ router.post("/patients/:patientId/records", protect, getPatientRecords);
  *       201:
  *         description: Medical record added successfully.
  */
-router.post("/patients/:patientId/records/add", protect, addMedicalRecord);
+router.post("/patients/:patientId/records/add", roleMiddleware('doctor'), addMedicalRecord);
 
 /**
  * @swagger
- * /api/doctors/patients/{patientId}/records/{recordId}:
+ * /api/doctor/patients/{patientId}/records/{recordId}:
  *   post:
  *     summary: Get specific medical record (Requires OTP)
  *     tags: [Doctors]
@@ -293,6 +319,6 @@ router.post("/patients/:patientId/records/add", protect, addMedicalRecord);
  *       200:
  *         description: Medical record details retrieved.
  */
-router.post("/patients/:patientId/records/:recordId", protect, getMedicalRecordById);
+router.post("/patients/:patientId/records/:recordId",roleMiddleware('doctor'), getMedicalRecordById);
 
 module.exports = router;
