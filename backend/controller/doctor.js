@@ -175,29 +175,33 @@ exports.getPatientRecords = async (req, res) => {
 // Add Medical Record (With OTP Authentication)
 exports.addMedicalRecord = async (req, res) => {
   try {
-    const { otp, type, summary, details } = req.body;
+    const { otp, category, notes, fileUrl } = req.body;
     const patient = await Patient.findById(req.params.patientId);
-    if (!patient) return res.status(404).json({ message: "Patient not found" });
+    if (!patient)
+      return res.status(404).json({ message: "Patient not found" });
 
     // Verify OTP
     const isOTPValid = await OTPService.verifyOTP(patient.email, otp);
-    if (!isOTPValid) return res.status(401).json({ message: "Invalid OTP" });
+    if (!isOTPValid)
+      return res.status(401).json({ message: "Invalid OTP" });
 
+    // Create a new medical record using fields matching the schema
     const newRecord = new MedicalRecord({
       patientId: req.params.patientId,
-      type,
-      summary,
-      details,
+      doctorId: req.user.id || undefined,
+      category,
+      notes,
+      fileUrl,
     });
     await newRecord.save();
 
-    res
-      .status(201)
-      .json({ message: "Medical record added", record: newRecord });
+    res.status(201).json({ message: "Medical record added", record: newRecord });
   } catch (error) {
+    console.error("Error adding medical record:", error);
     res.status(500).json({ message: "Server error", error });
   }
 };
+
 
 // Get Specific Medical Record (With OTP Authentication)
 exports.getMedicalRecordById = async (req, res) => {

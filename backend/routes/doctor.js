@@ -271,13 +271,16 @@ router.post("/patients/:patientId/records", roleMiddleware('doctor'), getPatient
  *               otp:
  *                 type: string
  *                 description: OTP received by the patient.
- *               type:
+ *               category:
  *                 type: string
  *                 enum: [Laboratory Results, Prescription, Diagnosis, Imaging, Vaccination, Surgery]
- *               summary:
+ *                 description: Category of the medical record.
+ *               notes:
  *                 type: string
- *               details:
+ *                 description: Additional notes or summary.
+ *               fileUrl:
  *                 type: string
+ *                 description: URL for any associated file.
  *     responses:
  *       201:
  *         description: Medical record added successfully.
