@@ -7,6 +7,10 @@ const {
   viewAppointments,
   getHospitals,
   getAllDoctors,
+  // >>> NEW CONTROLLER METHODS <<<
+  getMedicalRecords,
+  getConfirmedAppointmentsCount,
+  updatePatientProfile
 } = require("../controller/patient");
 const { protect } = require("../middleware/auth");
 
@@ -136,6 +140,10 @@ router.post("/login", login);
  *                 type: string
  *               hospitalId:
  *                 type: string
+ *               doctorName:
+ *                 type: string
+ *               hospitalName:
+ *                 type: string
  *               date:
  *                 type: string
  *                 format: date
@@ -177,7 +185,6 @@ router.get("/appointments", protect, viewAppointments);
  */
 router.get("/hospitals", getHospitals);
 
-
 /**
  * @swagger
  * /api/patient/doctor:
@@ -189,5 +196,79 @@ router.get("/hospitals", getHospitals);
  *         description: Returns a list of active doctors.
  */
 router.get("/doctor", getAllDoctors);
+
+
+/**
+ * @swagger
+ * /api/patient/medical-records:
+ *   get:
+ *     summary: Get a patient's medical records
+ *     tags: [Patients]
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Returns a list of the patient's medical records.
+ */
+router.get("/medical-records", protect, getMedicalRecords);
+
+/**
+ * @swagger
+ * /api/patient/appointments/confirmed-count:
+ *   get:
+ *     summary: Get number of confirmed appointments for a patient
+ *     tags: [Patients]
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Returns the number of confirmed appointments for the patient.
+ */
+router.get("/appointments/confirmed-count", protect, getConfirmedAppointmentsCount);
+
+/**
+ * @swagger
+ * /api/patient/update-profile:
+ *   patch:
+ *     summary: Update a patient's registration info
+ *     tags: [Patients]
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               firstName:
+ *                 type: string
+ *               lastName:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *               phone:
+ *                 type: string
+ *               address:
+ *                 type: string
+ *               dateOfBirth:
+ *                 type: string
+ *               gender:
+ *                 type: string
+ *               bloodType:
+ *                 type: string
+ *               allergies:
+ *                 type: string
+ *               nextOfKin:
+ *                 type: string
+ *               nextOfKinRelation:
+ *                 type: string
+ *               nextOfKinPhone:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Patient's profile updated successfully.
+ */
+router.patch("/update-profile", protect, updatePatientProfile);
 
 module.exports = router;

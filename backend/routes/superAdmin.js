@@ -1,8 +1,6 @@
-// routes/superAdminRoutes.js
 const express = require('express');
 const router = express.Router();
-const superAdminController = require('../controller/superAdmin'); 
-// ^ adjust path if your file is actually named superAdminController.js or in a different folder
+const superAdminController = require('../controller/superAdmin');
 const roleMiddleware = require('../middleware/role');
 
 /**
@@ -38,12 +36,24 @@ const roleMiddleware = require('../middleware/role');
  *                 type: string
  *               email:
  *                 type: string
+ *               phone:
+ *                 type: string
+ *               DOB:
+ *                 type: string
+ *               gender:
+ *                 type: string
+ *               address:
+ *                 type: string
  *               password:
  *                 type: string
  *             example:
  *               firstName: Admin
  *               lastName: User
  *               email: adminuser@example.com
+ *               phone: "1234567890"
+ *               DOB: "1990-01-01"
+ *               gender: "Female"
+ *               address: "123 Admin Street"
  *               password: Passw0rd!
  *     responses:
  *       201:
@@ -77,7 +87,25 @@ const roleMiddleware = require('../middleware/role');
  *       500:
  *         description: Server error
  */
-
 router.post('/create', roleMiddleware('superAdmin'), superAdminController.createAdmin);
+
+/**
+ * @swagger
+ * /api/super/stats:
+ *   get:
+ *     summary: Get total admins, total patients, total doctors, and creation logs (requires super admin).
+ *     tags: [SuperAdmin]
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Returns counts and logs
+ *       403:
+ *         description: Forbidden. Only super admins can access this route.
+ *       500:
+ *         description: Server error
+ */
+// <<< ADDED >>>
+router.get('/stats', roleMiddleware('superAdmin'), superAdminController.getStats);
 
 module.exports = router;

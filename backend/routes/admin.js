@@ -4,8 +4,11 @@ const {
   getAllHospitals,
   getHospitalById,
   getHospitalStats,
+  // <<< ADDED >>>
+  createDoctor,
+  getAdminStats,
 } = require("../controller/admin");
-const { protect } = require("../middleware/auth"); // Ensure authentication middleware is used
+const { protect } = require("../middleware/auth");
 const roleMiddleware = require("../middleware/role");
 
 const router = express.Router();
@@ -16,8 +19,6 @@ const router = express.Router();
  *   name: Admin
  *   description: API routes for admin management
  */
-
-
 
 /**
  * @swagger
@@ -52,21 +53,20 @@ const router = express.Router();
  *                 type: string
  *               country:
  *                 type: string
- *               adminName:
- *                 type: string
- *               adminEmail:
- *                 type: string
- *                 format: email
- *               adminPhone:
- *                 type: string
+ *             example:
+ *               name: MyHospital
+ *               email: hospital@example.com
+ *               password: "SecretPassword123"
+ *               phone: "123-456-7890"
+ *               address: "1234 Some St"
+ *               city: "SomeCity"
+ *               state: "ST"
+ *               country: "Country"
  *     responses:
  *       201:
  *         description: Hospital registered successfully.
  */
-router.post("/hospitals", roleMiddleware("admin"), registerHospital);
-
-
-
+router.post("/hospitals", protect, roleMiddleware("admin"), registerHospital);
 
 /**
  * @swagger
@@ -122,6 +122,97 @@ router.get("/hospitals/:id", protect, getHospitalById);
  *       200:
  *         description: Hospital statistics retrieved successfully.
  */
-router.get("/hospitals/:id/stats", protect,roleMiddleware('admin'), getHospitalStats);
+router.get(
+  "/hospitals/:id/stats",
+  protect,
+  roleMiddleware("admin"),
+  getHospitalStats
+);
+
+/* ------------------------------------------------------------------
+   NEW ROUTES
+   1) Create a doctor (Admin only)
+   2) Get admin stats
+   ------------------------------------------------------------------ */
+
+/**
+ * @swagger
+ * /api/admin/doctor:
+ *   post:
+ *     summary: Create a new doctor (Admin Only)
+ *     tags: [Admin]
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               firstName:
+ *                 type: string
+ *               lastName:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *               phone:
+ *                 type: string
+ *               DOB:
+ *                 type: string
+ *               gender:
+ *                 type: string
+ *               address:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *               hospitalId:
+ *                 type: string
+ *             example:
+ *               firstName: John
+ *               lastName: Doe
+ *               email: john.doe@hospital.com
+ *               phone: "123456789"
+ *               DOB: "1980-06-15"
+ *               gender: "Male"
+ *               address: "1234 Some Place"
+ *               password: "DoctorPassword!"
+ *               hospitalId: "602c74aae8e0861e245d7355"
+ *     responses:
+ *       201:
+ *         description: Doctor created successfully
+ *       400:
+ *         description: A doctor with this email already exists
+ *       500:
+ *         description: Server error
+ */
+router.post("/doctor", protect, roleMiddleware("admin"), createDoctor);
+
+/**
+ * @swagger
+ * /api/admin/stats:
+ *   get:
+ *     summary: Get stats for the logged-in admin (hospitals, doctors, patients)
+ *     tags: [Admin]
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Admin stats retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 totalHospitals:
+ *                   type: number
+ *                 totalPatients:
+ *                   type: number
+ *                 totalDoctors:
+ *                   type: number
+ *       500:
+ *         description: Server error
+ */
+router.get("/stats", protect, roleMiddleware("admin"), getAdminStats);
 
 module.exports = router;
