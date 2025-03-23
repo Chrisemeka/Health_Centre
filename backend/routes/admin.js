@@ -66,7 +66,7 @@ const router = express.Router();
  *       201:
  *         description: Hospital registered successfully.
  */
-router.post("/hospitals", protect, roleMiddleware("admin"), registerHospital);
+router.post("/hospitals", protect, registerHospital);
 
 /**
  * @swagger
@@ -125,7 +125,6 @@ router.get("/hospitals/:id", protect, getHospitalById);
 router.get(
   "/hospitals/:id/stats",
   protect,
-  roleMiddleware("admin"),
   getHospitalStats
 );
 
@@ -168,6 +167,12 @@ router.get(
  *                 type: string
  *               hospitalId:
  *                 type: string
+ *               specialty:
+ *                 type: string
+ *               licenseNumber:
+ *                 type: string
+ *               department:
+ *                 type: string
  *             example:
  *               firstName: John
  *               lastName: Doe
@@ -178,6 +183,9 @@ router.get(
  *               address: "1234 Some Place"
  *               password: "DoctorPassword!"
  *               hospitalId: "602c74aae8e0861e245d7355"
+ *               specialty: "Brain surgery"
+ *               licenseNumber: "120200202!"
+ *               department: "surgery"
  *     responses:
  *       201:
  *         description: Doctor created successfully
@@ -186,7 +194,7 @@ router.get(
  *       500:
  *         description: Server error
  */
-router.post("/doctor", protect, roleMiddleware("admin"), createDoctor);
+router.post("/doctor", protect, createDoctor);
 
 
 module.exports = router;

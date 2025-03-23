@@ -13,9 +13,9 @@ const HospitalSchema = new mongoose.Schema(
     country: { type: String, required: true },
 
     // Hospital Admin Details
-    adminName: { type: String, required: true },
-    adminEmail: { type: String, required: true },
-    adminPhone: { type: String, required: true },
+    // adminName: { type: String, required: true },
+    // adminEmail: { type: String, required: true },
+    // adminPhone: { type: String, required: true },
 
     status: { type: String, enum: ["Active", "Inactive"], default: "Active" },
 

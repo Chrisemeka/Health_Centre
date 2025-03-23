@@ -8,11 +8,11 @@ const DoctorSchema = new mongoose.Schema({
   email:     { type: String, required: true, unique: true },
   password:  { type: String, required: true },
 
-  specialty:      { type: String, required: true },
+  specialty:      { type: String, required: false },
   phone:          { type: String, required: true },
-  licenseNumber:  { type: String, required: true, unique: true },
+  licenseNumber:  { type: String, required: false, unique: true },
   gender:         { type: String, required: true, enum: ["Male", "Female", "Other"] },
-  department:     { type: String, required: true },
+  department:     { type: String, required: false },
   hospitalId:     { type: mongoose.Schema.Types.ObjectId, ref: "Hospital", required: true },
 
   // <<< ADDED if needed >>>

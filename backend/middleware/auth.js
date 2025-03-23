@@ -1,5 +1,5 @@
 const jwt = require("jsonwebtoken");
-const User = require("../model/user");
+const user = require("../model/user");
 require("dotenv").config();
 
 /**
@@ -16,10 +16,10 @@ exports.protect = async (req, res, next) => {
 
     // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
+    console.log(decoded);
     // Find user in the database
-    req.user = await User.findById(decoded.id).select("-password");
-
+    req.user = await user.findById(decoded.id).select("-password");
+    console.log(req.user);
     if (!req.user) {
       return res.status(401).json({ message: "User not found" });
     }

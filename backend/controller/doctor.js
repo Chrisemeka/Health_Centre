@@ -6,6 +6,7 @@ const OTPService = require("../services/otpServices");
 const Doctor = require("../model/doctor"); // Renamed from lowercase 'doctor' to uppercase if that is your convention
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const appointment = require("../model/appointment");
 
 // Doctor Login
 exports.doctorLogin = async (req, res) => {
@@ -44,12 +45,6 @@ exports.getDoctorProfile = async (req, res) => {
   }
 };
 
-/* 
-  NEW REQUIREMENT #1:
-  For doctor appointments return (time, date, patient name, patient id, purpose, status).
-  We'll populate the patient data in getDoctorAppointments 
-  and then transform the response.
-*/
 exports.getDoctorAppointments = async (req, res) => {
   try {
     const { date, status } = req.query;
@@ -59,11 +54,12 @@ exports.getDoctorAppointments = async (req, res) => {
     if (status) query.status = status;
 
     // Populate the patient info you need (firstName, lastName, etc.)
-    const appointments = await Appointment.find(query).populate(
+    
+    const appointments = await appointment.find(query).populate(
       "patientId",
       "firstName lastName"
     );
-
+    console.log(appointments);
     // Return the relevant fields
     const formatted = appointments.map((appt) => ({
       _id: appt._id,
@@ -80,6 +76,7 @@ exports.getDoctorAppointments = async (req, res) => {
 
     res.status(200).json(formatted);
   } catch (error) {
+    console.log(error)
     res.status(500).json({ message: "Server error", error });
   }
 };
