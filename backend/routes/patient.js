@@ -14,6 +14,7 @@ const {
   deleteAppointment
 } = require("../controller/patient");
 const { protect } = require("../middleware/auth");
+const { getAllHospitals } = require("../controller/admin");
 
 const router = express.Router();
 
@@ -231,7 +232,23 @@ router.get("/doctor", getAllDoctors);
  *       200:
  *         description: Returns a list of the patient's medical records.
  */
-router.get("/medical-records", protect, getMedicalRecords);
+
+router.post("/medical-records", protect, getMedicalRecords);
+
+
+
+/**
+ * @swagger
+ * /api/patient/hospitals:
+ *   get:
+ *     summary: Get a list of active hospitals
+ *     tags: [Patients]
+ *     responses:
+ *       200:
+ *         description: Returns a list of hospitals.
+ */
+router.get('/hospitals', protect, getAllHospitals);
+
 
 /**
  * @swagger

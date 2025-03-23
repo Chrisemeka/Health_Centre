@@ -7,6 +7,8 @@ const Appointment = require("../model/appointment");
 const Hospital = require("../model/hospital");
 const Doctor = require("../model/doctor"); 
 const MedicalRecord = require("../model/medicalRecords");
+const doctor = require("../model/doctor");
+const hospital = require("../model/hospital");
 
 // Generate JWT Token
 const generateToken = (user) => {
@@ -219,6 +221,18 @@ exports.getPatientProfile = async (req, res) => {
     }
 
     return res.status(200).json(user);
+  } catch (error) {
+    return res.status(500).json({ message: "Server error", error });
+  }
+};
+
+exports.getAllHospitals = async (req, res) => {
+  try {
+    const hospitals = await hospital.find({});
+    if (!hospitals || hospitals.length === 0) {
+      return res.status(404).json({ message: "No hospitals found" });
+    }
+    return res.status(200).json(hospitals);
   } catch (error) {
     return res.status(500).json({ message: "Server error", error });
   }
