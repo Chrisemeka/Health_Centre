@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const superAdminController = require('../controller/superAdmin');
 const roleMiddleware = require('../middleware/role');
+const { protect } = require('../middleware/auth');
 
 /**
  * @swagger
@@ -107,5 +108,25 @@ router.post('/create', roleMiddleware('superAdmin'), superAdminController.create
  */
 // <<< ADDED >>>
 router.get('/stats', roleMiddleware('superAdmin'), superAdminController.getStats);
+
+
+/**
+ * @swagger
+ * /api/super/admins:
+ *   get:
+ *     summary: Get all admins
+ *     tags: [SuperAdmin]
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of all admins retrieved successfully.
+ *       403:
+ *         description: Access denied. Only super admins can view this information.
+ *       500:
+ *         description: Server error
+ */
+router.get("/admins", roleMiddleware("superAdmin"), superAdminController.getAllAdmins); // New route for getting all admins
+
 
 module.exports = router;

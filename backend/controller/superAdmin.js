@@ -99,3 +99,15 @@ exports.getStats = async (req, res) => {
     return res.status(500).json({ error: 'Server error' });
   }
 };
+
+exports.getAllAdmins = async (req, res) => {
+  try {
+
+    const admins = await user.find({ userType: 'admin' }); // Assuming 'userType' is the field that distinguishes admin users
+    res.status(200).json(admins);
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error });
+  }
+};
+
+

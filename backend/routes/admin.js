@@ -188,31 +188,5 @@ router.get(
  */
 router.post("/doctor", protect, roleMiddleware("admin"), createDoctor);
 
-/**
- * @swagger
- * /api/admin/stats:
- *   get:
- *     summary: Get stats for the logged-in admin (hospitals, doctors, patients)
- *     tags: [Admin]
- *     security:
- *       - BearerAuth: []
- *     responses:
- *       200:
- *         description: Admin stats retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 totalHospitals:
- *                   type: number
- *                 totalPatients:
- *                   type: number
- *                 totalDoctors:
- *                   type: number
- *       500:
- *         description: Server error
- */
-router.get("/stats", protect, roleMiddleware("admin"), getAdminStats);
 
 module.exports = router;

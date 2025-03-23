@@ -7,10 +7,11 @@ const {
   viewAppointments,
   getHospitals,
   getAllDoctors,
-  // >>> NEW CONTROLLER METHODS <<<
   getMedicalRecords,
   getConfirmedAppointmentsCount,
-  updatePatientProfile
+  updatePatientProfile,
+  getPatientProfile,
+  deleteAppointment
 } = require("../controller/patient");
 const { protect } = require("../middleware/auth");
 
@@ -175,15 +176,35 @@ router.get("/appointments", protect, viewAppointments);
 
 /**
  * @swagger
- * /api/patient/hospitals:
+ * /api/patient/profile:
  *   get:
- *     summary: Get a list of active hospitals
+ *     summary: Get Patient Profile
  *     tags: [Patients]
+ *     security:
+ *       - BearerAuth: []
  *     responses:
  *       200:
- *         description: Returns a list of active hospitals.
+ *         description: Patient profile data retrieved successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 firstName:
+ *                   type: string
+ *                 lastName:
+ *                   type: string
+ *                 email:
+ *                   type: string
+ *                 verified:
+ *                   type: boolean
+ *       404:
+ *         description: Patient not found.
+ *       500:
+ *         description: Server error.
  */
-router.get("/hospitals", getHospitals);
+router.get("/profile", protect, getPatientProfile); // New route for getting patient profile
+
 
 /**
  * @swagger
@@ -214,17 +235,28 @@ router.get("/medical-records", protect, getMedicalRecords);
 
 /**
  * @swagger
- * /api/patient/appointments/confirmed-count:
- *   get:
- *     summary: Get number of confirmed appointments for a patient
+ * /api/patient/appointments/{id}:
+ *   delete:
+ *     summary: Delete an appointment
  *     tags: [Patients]
  *     security:
  *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
  *     responses:
  *       200:
- *         description: Returns the number of confirmed appointments for the patient.
+ *         description: Appointment deleted successfully.
+ *       404:
+ *         description: Appointment not found.
+ *       500:
+ *         description: Server error.
  */
-router.get("/appointments/confirmed-count", protect, getConfirmedAppointmentsCount);
+router.delete("/appointments/:id", protect, deleteAppointment); // New route for deleting an appointment
+
 
 /**
  * @swagger

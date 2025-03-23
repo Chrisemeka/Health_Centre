@@ -209,7 +209,42 @@ exports.getConfirmedAppointmentsCount = async (req, res) => {
   }
 };
 
+//Get Patient Profile
+
+exports.getPatientProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: "Patient not found" });
+    }
+
+    return res.status(200).json(user);
+  } catch (error) {
+    return res.status(500).json({ message: "Server error", error });
+  }
+};
+
+exports.deleteAppointment = async (req, res) => {
+  try {
+    const appointmentId = req.params.id; // Get appointment ID from request parameters
+    const appointment = await Appointment.findOneAndDelete({
+      _id: appointmentId,
+      patientId: req.user.id, // Ensure the appointment belongs to the patient
+    });
+
+    if (!appointment) {
+      return res.status(404).json({ message: "Appointment not found" });
+    }
+
+    return res.status(200).json({ message: "Appointment deleted successfully" });
+  } catch (error) {
+    return res.status(500).json({ message: "Server error", error });
+  }
+};
+
 // 3) Update Patient Info
+
+
 exports.updatePatientProfile = async (req, res) => {
   try {
     // Merge only the fields you allow the patient to update
