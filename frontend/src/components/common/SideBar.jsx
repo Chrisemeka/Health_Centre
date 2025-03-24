@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 
-const Sidebar = ({ items }) => {
+const SideBar = ({ items }) => {
   const location = useLocation();
 
   // Icons mapping
@@ -82,4 +82,4 @@ const Sidebar = ({ items }) => {
   );
 };
 
-export default Sidebar;
+export default SideBar;
