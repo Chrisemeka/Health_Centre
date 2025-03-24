@@ -52,7 +52,7 @@ const Login = () => {
   
     try {
       // Make the API call to the login endpoint
-      const response = await api.post('/api/patient/login', formData);
+      const response = await api.post('/api/auth/login', formData);
   
       // Check if the response indicates success (status code 2xx)
       if (response.status >= 200 && response.status < 300) {
@@ -66,9 +66,24 @@ const Login = () => {
         localStorage.setItem('user', JSON.stringify(user));
 
         console.log(user)
-        // console.log('patient logged in')
-        navigate('/patient/dashboard');
   
+        // Redirect based on user role
+        switch (user.role) {
+          case 'admin':
+            console.log('admin logged in')
+            navigate('/admin/dashboard');
+            break;
+          case 'doctor':
+            console.log('doctor logged in')
+            navigate('/doctor/dashboard');
+            break;
+          case 'patient':
+            console.log('patient logged in')
+            navigate('/patient/dashboard');
+            break;
+          default:
+            navigate('/');
+        }
       } else {
         // Handle unexpected response status
         throw new Error('Login failed. Please check your credentials.');

@@ -205,72 +205,72 @@ const PatientRecords = () => {
     }
     
     try {
-      // Handle file uploads first if needed
-      let documentUrl = null;
-      let imageUrls = [];
+      // Create form data object that matches backend expectations
+      const formData = new FormData();
+      formData.append('otp', recordForm.otp);
+      formData.append('recordType', recordForm.type);
+      formData.append('summary', recordForm.summary);
+      formData.append('details', recordForm.details);
       
-      // If there's a document file, upload it first
+      // Handle file uploads separately if needed
       if (recordForm.fileUpload) {
-        const documentFormData = new FormData();
-        documentFormData.append('file', recordForm.fileUpload);
-        
-        const documentResponse = await api.post('/api/uploads/document', documentFormData, {
-          headers: {
-            'Content-Type': 'multipart/form-data'
-          }
-        });
-        
-        documentUrl = documentResponse.data.url;
+        formData.append('document', recordForm.fileUpload);
       }
       
-      // If there are image files, upload them
       if (recordForm.imageUpload && recordForm.imageUpload.length > 0) {
-        for (let i = 0; i < recordForm.imageUpload.length; i++) {
-          const imageFormData = new FormData();
-          imageFormData.append('file', recordForm.imageUpload[i]);
-          
-          const imageResponse = await api.post('/api/uploads/image', imageFormData, {
-            headers: {
-              'Content-Type': 'multipart/form-data'
-            }
-          });
-          
-          imageUrls.push(imageResponse.data.url);
-        }
+        Array.from(recordForm.imageUpload).forEach((image, index) => {
+          formData.append(`imageUrls`, image);
+        });
       }
-      
-      // Prepare the data object
-      const recordData = {
+  
+      // Debug: Log what we're sending
+      console.log('Submitting:', {
         otp: recordForm.otp,
         recordType: recordForm.type,
         summary: recordForm.summary,
         details: recordForm.details,
-        documentUrl: documentUrl,
-        imageUrls: imageUrls
-      };
-      
-      // Now send the record data with the file URLs using JSON.stringify
+        hasDocument: !!recordForm.fileUpload,
+        imageCount: recordForm.imageUpload?.length || 0
+      });
+  
       const response = await api.post(
         `/api/doctor/patients/${patientId}/records/add`, 
-        JSON.stringify(recordData), // This is the key change
+        formData,
         {
           headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'multipart/form-data'
           }
         }
       );
       
-      // Update records and close modal
-      setRecords([response.data.record, ...records]);
-      setFilteredRecords([response.data.record, ...filteredRecords]);
+      // Update UI
+      setRecords([response.data, ...records]);
+      setFilteredRecords([response.data, ...filteredRecords]);
       setIsAddModalOpen(false);
       alert('Record added successfully.');
+      
+      // Reset form
+      setRecordForm({
+        type: '',
+        summary: '',
+        details: '',
+        fileUpload: null,
+        imageUpload: [],
+        otp: ''
+      });
+      setFormErrors({});
+      
     } catch (error) {
       console.error('Error adding record:', error);
-      if (error.response && error.response.status === 401) {
-        setFormErrors({otp: 'Invalid OTP. Please try again with a valid OTP.'});
+      if (error.response) {
+        console.error('Backend response:', error.response.data);
+        if (error.response.status === 401) {
+          setFormErrors({otp: 'Invalid OTP. Please try again with a valid OTP.'});
+        } else {
+          setFormErrors({general: error.response.data.message || 'Failed to add record. Please try again.'});
+        }
       } else {
-        setFormErrors({general: 'Failed to add record. Please try again.'});
+        setFormErrors({general: 'Network error. Please check your connection.'});
       }
     }
   };

@@ -9,6 +9,7 @@ const Doctor = require("../model/doctor");
 const MedicalRecord = require("../model/medicalRecords");
 const doctor = require("../model/doctor");
 const hospital = require("../model/hospital");
+const medicalRecords = require("../model/medicalRecords");
 
 // Generate JWT Token
 const generateToken = (user) => {
@@ -161,38 +162,29 @@ exports.getAllDoctors = async (req, res) => {
 // 1) Get Medical Records
 exports.getMedicalRecords = async (req, res) => {
   try {
-    // Example using a hypothetical MedicalRecord model with references:
-    // If your structure differs, adjust accordingly
-    // .populate("hospitalId", "hospitalName")
-    // .populate("doctorId", "firstName lastName")
-    // ...
-    // For now, let's assume you have a MedicalRecord model:
-
-    // const records = await MedicalRecord.find({ patientId: req.user.id })
-    //   .populate("hospitalId", "hospitalName")
-    //   .populate("doctorId", "firstName lastName");
-
-    // If you don’t have a separate model, you could fetch from some other source.
-
-    // Mock/placeholder data if needed:
-    const records = []; // Replace with real DB query
-
-    // Return only the requested fields: record_type, hospital name, date, time, doctor name, summary
-    // If your schema has them as recordType, hospitalId, date, time, doctorId, summary, etc., map them:
-    const formatted = records.map((rec) => ({
-      record_type: rec.recordType,
-      hospitalName: rec.hospitalId?.hospitalName,
-      date: rec.date,
-      time: rec.time,
-      doctorName: rec.doctorId
-        ? `${rec.doctorId.firstName} ${rec.doctorId.lastName}`
-        : undefined,
-      summary: rec.summary,
+    const records = await medicalRecords.find({ patientId: req.user.id });
+    
+    // Format the records if needed
+    const formatted = records.map(record => ({
+      id: record._id,
+      type: record.type || 'Unknown',
+      hospital: record.hospital || '',
+      doctor: record.doctor || '',
+      date: record.date || new Date().toISOString(),
+      summary: record.summary || '',
+      details: record.details || '',
+      documentUrl: record.documentUrl || null
     }));
-
+    
+    // Send a single response
     return res.status(200).json(formatted);
+    
   } catch (error) {
-    return res.status(500).json({ message: "Server error", error });
+    console.error('Error fetching medical records:', error);
+    return res.status(500).json({ 
+      message: "Failed to fetch medical records",
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 };
 

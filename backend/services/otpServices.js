@@ -22,6 +22,7 @@ exports.storeOTP = (email, otp) => {
  */
 exports.verifyOTP = (email, enteredOTP) => {
   const storedOTP = otpCache.get(email);
+  console.log(storedOTP, enteredOTP)
   if (storedOTP && storedOTP === enteredOTP) {
     otpCache.del(email); // Remove OTP after successful verification
     return true;

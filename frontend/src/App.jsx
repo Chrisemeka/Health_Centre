@@ -9,6 +9,8 @@ import PatientLayout from './components/layouts/PatientLayout';
 // Landing Page
 import Landing from './pages/Landing';
 import Login from './pages/auth/Login';
+import DoctorLogin from './pages/auth/DoctorLogin';
+import AdminLogin from './pages/auth/AdminLogin';
 import Register from './pages/auth/Register';
 import About from './pages/Landing/About';
 import Contact from './pages/Landing/Contact';
@@ -32,11 +34,12 @@ import Error404 from './pages/Error404';
 // Super Admin
 import SuperAdminDashboard from './pages/super/Dashboard';
 import SuperAdminLayout from './components/layouts/SuperAdminLayout';
-import HospitalRegistration from './pages/super/Hospital';
+import HospitalRegistration from './pages/admin/Hospital';
 import AdminDashboard from './pages/admin/Dashboard';
 import AdminLayout from './components/layouts/AdminLayout';
-import CreateUser from './pages/admin/CreateUser';
+import CreateUser from './pages/super/CreateUser';
 import SystemLogs from './pages/admin/SystemLogs';
+import CreateDoctor from './pages/admin/CreateDoctor';
 
 
 
@@ -51,6 +54,8 @@ function App() {
           <Route path="/contact" element={<Contact />} />
           <Route path="/services" element={<Services />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/doctor/login" element={<DoctorLogin />} />
+          <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="/register" element={<Register />} />
           <Route path="*" element={<Error404 />} />
         </Route>
@@ -76,7 +81,7 @@ function App() {
         <Route element={<SuperAdminLayout />}>
           <Route path="/superadmin" element={<Navigate to="/superadmin/dashboard" replace />} />
           <Route path="/superadmin/dashboard" element={<SuperAdminDashboard />} />
-          <Route path="/superadmin/hospitals" element={<HospitalRegistration />} />
+          <Route path="/superadmin/create-user" element={<CreateUser />} />
         </Route>
 
         {/* Admin route */}
@@ -84,8 +89,8 @@ function App() {
           <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="/admin/system-logs" element={<SystemLogs />} />
-          <Route path="/admin/create-user" element={<CreateUser />} />
-          {/* <Route path="/superadmin/hospitals" element={<HospitalRegistration />} /> */}
+          <Route path="/admin/hospitals" element={<HospitalRegistration />} />
+          <Route path="/admin/create-doctor" element={<CreateDoctor />} />
         </Route>
       </Routes>
 

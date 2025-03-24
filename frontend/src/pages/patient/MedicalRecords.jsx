@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import api from '../../api';
 
 const MedicalRecords = () => {
   const [loading, setLoading] = useState(true);
@@ -10,25 +11,34 @@ const MedicalRecords = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
   const [accessLogs, setAccessLogs] = useState([]);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    // Simulate API call to fetch medical records
     const fetchMedicalRecords = async () => {
       setLoading(true);
+      setError(null);
       
       try {
-        // In a real app, this would be an API call
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        const response = await api.get('/api/patient/medical-records');
+        // Ensure we have an array and each record has required fields
+        const formattedRecords = Array.isArray(response.data) 
+          ? response.data.map(record => ({
+              id: record.id || Math.random().toString(36).substr(2, 9),
+              type: record.type || 'Unknown',
+              hospital: record.hospital || '',
+              doctor: record.doctor || '',
+              date: record.date || new Date().toISOString(),
+              summary: record.summary || '',
+              details: record.details || '',
+              documentUrl: record.documentUrl || null
+            }))
+          : [];
         
-        // Mock data
-        const mockRecords = [
-          // ... (same as before)
-        ];
-        
-        setRecords(mockRecords);
-        setFilteredRecords(mockRecords);
+        setRecords(formattedRecords);
+        setFilteredRecords(formattedRecords);
       } catch (error) {
         console.error('Error fetching medical records:', error);
+        setError('Failed to load medical records. Please try again later.');
       } finally {
         setLoading(false);
       }
@@ -37,22 +47,23 @@ const MedicalRecords = () => {
     fetchMedicalRecords();
   }, []);
 
-  useEffect(() => {
-    // Filter records based on search term and type filter
-    const filtered = records.filter(record => {
-      const matchesSearch = 
-        record.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        record.hospital.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        record.doctor.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        record.summary.toLowerCase().includes(searchTerm.toLowerCase());
+  // useEffect(() => {
+  //   // Filter records based on search term and type filter
+  //   const filtered = records.filter(record => {
+  //     const matchesSearch = 
+  //       record.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  //       (record.hospital && record.hospital.toLowerCase().includes(searchTerm.toLowerCase())) ||
+  //       (record.doctor && record.doctor.toLowerCase().includes(searchTerm.toLowerCase())) ||
+  //       (record.summary && record.summary.toLowerCase().includes(searchTerm.toLowerCase())
+  //   )
       
-      const matchesType = filterType === 'all' || record.type === filterType;
+  //     const matchesType = filterType === 'all' || record.type === filterType;
       
-      return matchesSearch && matchesType;
-    });
+  //     return matchesSearch && matchesType;
+  //   });
     
-    setFilteredRecords(filtered);
-  }, [searchTerm, filterType, records]);
+  //   setFilteredRecords(filtered);
+  // }, [searchTerm, filterType, records]);
 
   const handleSearch = (e) => {
     setSearchTerm(e.target.value);
@@ -67,28 +78,20 @@ const MedicalRecords = () => {
     setIsViewModalOpen(true);
   };
 
-  const handleViewAccessLog = (record) => {
+  const handleViewAccessLog = async (record) => {
     setSelectedRecord(record);
     
-    // Simulate API call to fetch access logs for the selected record
-    const fetchAccessLogs = async () => {
-      try {
-        // In a real app, this would be an API call
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        // Mock data
-        const mockLogs = [
-          // ... (same as before)
-        ];
-        
-        setAccessLogs(mockLogs);
-        setIsAccessLogModalOpen(true);
-      } catch (error) {
-        console.error('Error fetching access logs:', error);
-      }
-    };
-    
-    fetchAccessLogs();
+    try {
+      setLoading(true);
+      const response = await api.get(`/api/patient/medical-records/${record.id}/access-logs`);
+      setAccessLogs(response.data);
+      setIsAccessLogModalOpen(true);
+    } catch (error) {
+      console.error('Error fetching access logs:', error);
+      setError('Failed to load access logs. Please try again later.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Get unique record types for filter dropdown
@@ -100,6 +103,12 @@ const MedicalRecords = () => {
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-3xl font-extrabold text-gray-900">Medical Records</h1>
         </div>
+
+        {error && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+            {error}
+          </div>
+        )}
 
         {/* Filters Section */}
         <div className="bg-white shadow-md rounded-lg p-6 mb-6">
@@ -188,16 +197,16 @@ const MedicalRecords = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {record.hospital}
+                      {record.hospital || 'N/A'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {record.date}
+                      {new Date(record.date).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {record.doctor}
+                      {record.doctor || 'N/A'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {record.summary}
+                      {record.summary || 'No summary available'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       <div className="flex space-x-2">
@@ -250,44 +259,46 @@ const MedicalRecords = () => {
                     </div>
                     <div>
                       <p className="text-sm font-medium text-gray-500">Date</p>
-                      <p className="mt-1">{selectedRecord.date}</p>
+                      <p className="mt-1">{new Date(selectedRecord.date).toLocaleDateString()}</p>
                     </div>
                     <div>
                       <p className="text-sm font-medium text-gray-500">Hospital</p>
-                      <p className="mt-1">{selectedRecord.hospital}</p>
+                      <p className="mt-1">{selectedRecord.hospital || 'N/A'}</p>
                     </div>
                     <div>
                       <p className="text-sm font-medium text-gray-500">Doctor</p>
-                      <p className="mt-1">{selectedRecord.doctor}</p>
+                      <p className="mt-1">{selectedRecord.doctor || 'N/A'}</p>
                     </div>
                   </div>
                   
                   <div>
                     <p className="text-sm font-medium text-gray-500">Summary</p>
-                    <p className="mt-1">{selectedRecord.summary}</p>
+                    <p className="mt-1">{selectedRecord.summary || 'No summary available'}</p>
                   </div>
                   
                   <div>
                     <p className="text-sm font-medium text-gray-500">Details</p>
-                    <p className="mt-1">{selectedRecord.details}</p>
+                    <p className="mt-1">{selectedRecord.details || 'No details available'}</p>
                   </div>
                   
-                  <div className="pt-4 border-t border-gray-200">
-                    <p className="text-sm font-medium text-gray-500">Document</p>
-                    <div className="mt-2">
-                      <a
-                        href={selectedRecord.fileUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-teal-500"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                        </svg>
-                        View {selectedRecord.fileType} Document
-                      </a>
+                  {selectedRecord.documentUrl && (
+                    <div className="pt-4 border-t border-gray-200">
+                      <p className="text-sm font-medium text-gray-500">Document</p>
+                      <div className="mt-2">
+                        <a
+                          href={selectedRecord.documentUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                          </svg>
+                          View Document
+                        </a>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               )}
             </div>
@@ -321,64 +332,68 @@ const MedicalRecords = () => {
                       </div>
                       <div>
                         <p className="text-sm font-medium text-gray-500">Date</p>
-                        <p className="mt-1">{selectedRecord.date}</p>
+                        <p className="mt-1">{new Date(selectedRecord.date).toLocaleDateString()}</p>
                       </div>
                       <div>
                         <p className="text-sm font-medium text-gray-500">Hospital</p>
-                        <p className="mt-1">{selectedRecord.hospital}</p>
+                        <p className="mt-1">{selectedRecord.hospital || 'N/A'}</p>
                       </div>
                       <div>
                         <p className="text-sm font-medium text-gray-500">Summary</p>
-                        <p className="mt-1">{selectedRecord.summary}</p>
+                        <p className="mt-1">{selectedRecord.summary || 'No summary available'}</p>
                       </div>
                     </div>
                   </div>
                   
                   <p className="text-lg font-medium">Access History</p>
                   
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead>
-                      <tr>
-                        <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Doctor
-                        </th>
-                        <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Hospital
-                        </th>
-                        <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Action
-                        </th>
-                        <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Timestamp
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {accessLogs.map((log) => (
-                        <tr key={log.id}>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {log.doctor}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {log.hospital}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                              log.action === 'Viewed' ? 'bg-blue-100 text-blue-800' :
-                              log.action === 'Updated' ? 'bg-amber-100 text-amber-800' :
-                              log.action === 'Created' ? 'bg-green-100 text-green-800' :
-                              'bg-gray-100 text-gray-800'
-                            }`}>
-                              {log.action}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {log.timestamp}
-                          </td>
+                  {accessLogs.length > 0 ? (
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead>
+                        <tr>
+                          <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Doctor
+                          </th>
+                          <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Hospital
+                          </th>
+                          <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Action
+                          </th>
+                          <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Timestamp
+                          </th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {accessLogs.map((log) => (
+                          <tr key={log.id}>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {log.doctor || 'N/A'}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {log.hospital || 'N/A'}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                log.action === 'Viewed' ? 'bg-blue-100 text-blue-800' :
+                                log.action === 'Updated' ? 'bg-amber-100 text-amber-800' :
+                                log.action === 'Created' ? 'bg-green-100 text-green-800' :
+                                'bg-gray-100 text-gray-800'
+                              }`}>
+                                {log.action}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {new Date(log.timestamp).toLocaleString()}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  ) : (
+                    <p className="text-gray-500">No access logs available for this record.</p>
+                  )}
                 </div>
               )}
             </div>

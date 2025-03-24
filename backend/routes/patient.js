@@ -233,7 +233,7 @@ router.get("/doctor", getAllDoctors);
  *         description: Returns a list of the patient's medical records.
  */
 
-router.post("/medical-records", protect, getMedicalRecords);
+router.get("/medical-records", protect, getMedicalRecords);
 
 
 

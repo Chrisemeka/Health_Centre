@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import api from '../../api';
 
 const CreateUser = () => {
   const navigate = useNavigate();
@@ -8,12 +9,12 @@ const CreateUser = () => {
     firstName: '',
     lastName: '',
     email: '',
-    role: 'Patient',
+    role: 'Admin',
     password: '',
     confirmPassword: '',
     phone: '',
     address: '',
-    dateOfBirth: '',
+    DOB: '',
     gender: '',
     specialization: '', // For doctors
     licenseNumber: '',  // For doctors
@@ -81,11 +82,26 @@ const CreateUser = () => {
     setLoading(true);
     
     try {
-      // In a real app, this would be an API call
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      // Prepare data for API submission - match exact field names expected by the API
+      const userData = {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        password: formData.password,
+        phone: formData.phone || undefined,
+        address: formData.address || undefined,
+        DOB: formData.DOB || undefined,
+        gender: formData.gender || undefined
+      };
+      
+      
+      // Send data to API
+      const response = await api.post('/api/super/create', userData);
+      
+      console.log('User created successfully:', response.data);
       
       // Success! Redirect to dashboard with notification
-      navigate('/admin/dashboard', { 
+      navigate('/superadmin/dashboard', { 
         state: { 
           notification: {
             type: 'success',
@@ -95,9 +111,28 @@ const CreateUser = () => {
       });
     } catch (error) {
       console.error('Error creating user:', error);
-      setErrors({
-        submit: 'Failed to create user. Please try again.'
-      });
+      
+      // Handle API validation errors
+      if (error.response && error.response.data && error.response.data.errors) {
+        // If the API returns specific field errors
+        const apiErrors = {};
+        
+        error.response.data.errors.forEach(err => {
+          apiErrors[err.field] = err.message;
+        });
+        
+        setErrors(apiErrors);
+      } else if (error.response && error.response.data && error.response.data.message) {
+        // If the API returns a general error message
+        setErrors({
+          submit: error.response.data.message
+        });
+      } else {
+        // Generic error handling
+        setErrors({
+          submit: 'Failed to create user. Please try again.'
+        });
+      }
     } finally {
       setLoading(false);
     }
@@ -106,9 +141,9 @@ const CreateUser = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-gray-900">Create New User</h1>
+        <h1 className="text-2xl font-semibold text-gray-900">Create New Admin</h1>
         <Link
-          to="/admin/dashboard"
+          to="/superadmin/dashboard"
           className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500"
         >
           Cancel
@@ -124,24 +159,6 @@ const CreateUser = () => {
           )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* User Type */}
-            <div className="md:col-span-2">
-              <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-1">
-                User Type
-              </label>
-              <select
-                id="role"
-                name="role"
-                className="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
-                value={formData.role}
-                onChange={handleChange}
-              >
-                <option value="Patient">Patient</option>
-                <option value="Doctor">Doctor</option>
-                <option value="Admin">Admin</option>
-              </select>
-            </div>
-
             {/* Basic Information */}
             <div>
               <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1">
@@ -215,15 +232,15 @@ const CreateUser = () => {
             </div>
 
             <div>
-              <label htmlFor="dateOfBirth" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="DOB" className="block text-sm font-medium text-gray-700 mb-1">
                 Date of Birth
               </label>
               <input
                 type="date"
-                id="dateOfBirth"
-                name="dateOfBirth"
+                id="DOB"
+                name="DOB"
                 className="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
-                value={formData.dateOfBirth}
+                value={formData.DOB}
                 onChange={handleChange}
               />
             </div>
@@ -260,49 +277,6 @@ const CreateUser = () => {
                 onChange={handleChange}
               ></textarea>
             </div>
-
-            {/* Doctor-specific fields */}
-            {formData.role === 'Doctor' && (
-              <>
-                <div>
-                  <label htmlFor="specialization" className="block text-sm font-medium text-gray-700 mb-1">
-                    Specialization
-                  </label>
-                  <input
-                    type="text"
-                    id="specialization"
-                    name="specialization"
-                    className={`w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 ${
-                      errors.specialization ? 'border-red-500' : ''
-                    }`}
-                    value={formData.specialization}
-                    onChange={handleChange}
-                  />
-                  {errors.specialization && (
-                    <p className="mt-1 text-sm text-red-600">{errors.specialization}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label htmlFor="licenseNumber" className="block text-sm font-medium text-gray-700 mb-1">
-                    License Number
-                  </label>
-                  <input
-                    type="text"
-                    id="licenseNumber"
-                    name="licenseNumber"
-                    className={`w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 ${
-                      errors.licenseNumber ? 'border-red-500' : ''
-                    }`}
-                    value={formData.licenseNumber}
-                    onChange={handleChange}
-                  />
-                  {errors.licenseNumber && (
-                    <p className="mt-1 text-sm text-red-600">{errors.licenseNumber}</p>
-                  )}
-                </div>
-              </>
-            )}
 
             {/* Password Fields */}
             <div>
@@ -347,7 +321,7 @@ const CreateUser = () => {
           {/* Submit Button */}
           <div className="flex justify-end space-x-3">
             <Link
-              to="/admin/dashboard"
+              to="/superadmin/dashboard"
               className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500"
             >
               Cancel
@@ -366,7 +340,7 @@ const CreateUser = () => {
                   Creating...
                 </>
               ) : (
-                'Create User'
+                'Create Admin'
               )}
             </button>
           </div>

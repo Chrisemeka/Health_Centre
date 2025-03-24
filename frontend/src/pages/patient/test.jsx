@@ -3,7 +3,6 @@ import api from '../../api';
 
 const PatientAppointments = () => {
   const [loading, setLoading] = useState(true);
-  const [cancelLoading, setCancelLoading] = useState(false);
   const [appointments, setAppointments] = useState([]);
   const [filteredAppointments, setFilteredAppointments] = useState([]);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
@@ -12,8 +11,6 @@ const PatientAppointments = () => {
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
-  const [successMessage, setSuccessMessage] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');
   
   // Added state for doctors and hospitals data
   const [doctors, setDoctors] = useState([]);
@@ -35,105 +32,57 @@ const PatientAppointments = () => {
   // Form errors
   const [formErrors, setFormErrors] = useState({});
 
-  // Helper to format dates
-  const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  };
-
-  // Load doctors and hospitals data regardless of modal state
-  // so we can use this data to populate appointment information
-  const fetchDoctorsAndHospitals = async () => {
-    try {
-      // Fetch doctors and hospitals in parallel
-      const [doctorsResponse, hospitalsResponse] = await Promise.all([
-        api.get('/api/patient/doctor'),
-        api.get('/api/patient/hospitals')
-      ]);
-      
-      setDoctors(doctorsResponse.data);
-      setHospitals(hospitalsResponse.data);
-      return {
-        doctors: doctorsResponse.data,
-        hospitals: hospitalsResponse.data
-      };
-    } catch (error) {
-      console.error('Error fetching doctors and hospitals:', error);
-      return { doctors: [], hospitals: [] };
-    }
-  };
-
-  const fetchAppointments = async () => {
-    setLoading(true);
-    
-    try {
-      // First get doctors and hospitals data to help with name lookups
-      const { doctors, hospitals } = await fetchDoctorsAndHospitals();
-      
-      // Then fetch appointments
-      const response = await api.get('/api/patient/appointments');
-      console.log('Fetched appointments:', response.data);
-      
-      // Process appointments to enhance them with full doctor and hospital names
-      const processedAppointments = response.data.map(appointment => {
-        // Find doctor and hospital names from our lookup data
-        let doctorName = appointment.doctorName;
-        let hospitalName = appointment.hospitalName;
-        let doctor = null;
-        
-        // Look up doctor name if not present but we have an ID
-        if (!doctorName && appointment.doctorId) {
-          doctor = doctors.find(d => d._id === appointment.doctorId);
-          if (doctor) {
-            doctorName = `${doctor.firstName} ${doctor.lastName}`;
-          }
-        }
-        
-        // Look up hospital name using the doctor's hospitalId
-        if (doctor && doctor.hospitalId) {
-          const hospital = hospitals.find(h => h._id === doctor.hospitalId);
-          if (hospital) {
-            hospitalName = hospital.name;
-          }
-        }
-        
-        return {
-          ...appointment,
-          doctorName: doctorName || appointment.doctorId || 'Unknown Doctor',
-          hospitalName: hospitalName || 'Unknown Hospital',
-          status: appointment.status || 'Pending',
-          formattedDate: formatDate(appointment.date)
-        };
-      });
-      
-      
-      setAppointments(processedAppointments);
-      setFilteredAppointments(processedAppointments);
-    } catch (error) {
-      console.error('Error fetching appointments:', error);
-      setErrorMessage('Failed to load appointments. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    // Fetch appointments (which also fetches doctors and hospitals)
+    // Fetch appointments
+    const fetchAppointments = async () => {
+      setLoading(true);
+      
+      try {
+        const response = await api.get('/api/patient/appointments');
+        console.log('Fetched appointments:', response.data);
+        
+        // Make sure all appointments have a status property for filtering
+        const processedAppointments = response.data.map(appointment => ({
+          ...appointment,
+          status: appointment.status || 'Pending' // Default to 'Pending' if status is missing
+        }));
+        
+        setAppointments(processedAppointments);
+        setFilteredAppointments(processedAppointments);
+      } catch (error) {
+        console.error('Error fetching appointments:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
     fetchAppointments();
   }, []);
 
-  // Fetch doctors and hospitals when request modal opens - to ensure fresh data
+  // Fetch doctors and hospitals when request modal opens
   useEffect(() => {
     if (isRequestModalOpen) {
-      setLoadingOptions(true);
-      fetchDoctorsAndHospitals().then(() => {
-        setLoadingOptions(false);
-      });
+      const fetchOptions = async () => {
+        setLoadingOptions(true);
+        try {
+          // Fetch doctors and hospitals in parallel
+          const [doctorsResponse, hospitalsResponse] = await Promise.all([
+            api.get('/api/patient/doctor'),
+            api.get('/api/patient/hospitals')
+          ]);
+          
+          setDoctors(doctorsResponse.data);
+          setHospitals(hospitalsResponse.data);
+
+          console.log(doctorsResponse.data, hospitalsResponse.data);
+        } catch (error) {
+          console.error('Error fetching options:', error);
+        } finally {
+          setLoadingOptions(false);
+        }
+      };
+      
+      fetchOptions();
     }
   }, [isRequestModalOpen]);
 
@@ -141,7 +90,9 @@ const PatientAppointments = () => {
     // Filter appointments based on search term and status filter
     const filtered = appointments.filter(appointment => {
       const matchesSearch = searchTerm === '' || 
+        (appointment.doctorId && appointment.doctorId.toString().toLowerCase().includes(searchTerm.toLowerCase())) ||
         (appointment.doctorName && appointment.doctorName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (appointment.hospitalId && appointment.hospitalId.toString().toLowerCase().includes(searchTerm.toLowerCase())) ||
         (appointment.hospitalName && appointment.hospitalName.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (appointment.purpose && appointment.purpose.toLowerCase().includes(searchTerm.toLowerCase()));
       
@@ -152,25 +103,6 @@ const PatientAppointments = () => {
     
     setFilteredAppointments(filtered);
   }, [searchTerm, filterStatus, appointments]);
-
-  // Clear messages after 5 seconds
-  useEffect(() => {
-    if (successMessage) {
-      const timer = setTimeout(() => {
-        setSuccessMessage('');
-      }, 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [successMessage]);
-
-  useEffect(() => {
-    if (errorMessage) {
-      const timer = setTimeout(() => {
-        setErrorMessage('');
-      }, 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [errorMessage]);
 
   const handleSearch = (e) => {
     setSearchTerm(e.target.value);
@@ -191,33 +123,19 @@ const PatientAppointments = () => {
   };
 
   const confirmCancelAppointment = async () => {
-    if (!selectedAppointment || !selectedAppointment._id) {
-      setErrorMessage('Appointment ID is missing. Please try again.');
-      setIsCancelModalOpen(false);
-      return;
-    }
-
-    setCancelLoading(true);
-    
     try {
-      // Make the API call to cancel the appointment
-      const response = await api.delete(`/api/patient/appointments/${selectedAppointment._id}`, {
-        status: 'Cancelled'
-      });
+      // In a real app, this would be an API call
+      await new Promise(resolve => setTimeout(resolve, 500));
       
-      console.log('Cancel appointment response:', response);
+      // Update the local state
+      setAppointments(appointments.map(apt => 
+        apt.id === selectedAppointment.id ? { ...apt, status: 'Cancelled' } : apt
+      ));
       
-      // Refresh the appointments list
-      await fetchAppointments();
-      
-      // Close the modal and show success message
       setIsCancelModalOpen(false);
-      setSuccessMessage('Appointment cancelled successfully.');
+      alert('Appointment cancelled successfully.');
     } catch (error) {
       console.error('Error cancelling appointment:', error);
-      setErrorMessage('Failed to cancel appointment. Please try again.');
-    } finally {
-      setCancelLoading(false);
     }
   };
 
@@ -226,14 +144,14 @@ const PatientAppointments = () => {
     
     // Handle select changes for doctor and hospital
     if (name === 'doctorId' && value) {
-      const selectedDoctor = doctors.find(doc => doc._id === value);
+      const selectedDoctor = doctors.find(doc => doc.id === value);
       setRequestForm({
         ...requestForm,
         doctorId: value,
-        doctorName: selectedDoctor ? `${selectedDoctor.firstName} ${selectedDoctor.lastName}` : ''
+        doctorName: selectedDoctor ? selectedDoctor.name : ''
       });
     } else if (name === 'hospitalId' && value) {
-      const selectedHospital = hospitals.find(hosp => hosp._id === value);
+      const selectedHospital = hospitals.find(hosp => hosp.id === value);
       setRequestForm({
         ...requestForm,
         hospitalId: value,
@@ -291,7 +209,6 @@ const PatientAppointments = () => {
 
   const handleRequestAppointment = async (e) => {
     e.preventDefault();
-    console.log("Form submission triggered");
     
     const errors = validateRequestForm();
     if (Object.keys(errors).length > 0) {
@@ -332,12 +249,14 @@ const PatientAppointments = () => {
       setIsRequestModalOpen(false);
       
       // Refresh appointments list to show the new appointment
-      await fetchAppointments();
+      const updatedAppointments = await api.get('/api/patient/appointments');
+      setAppointments(updatedAppointments.data);
+      setFilteredAppointments(updatedAppointments.data);
       
-      setSuccessMessage('Appointment request submitted successfully.');
+      alert('Appointment request submitted successfully.');
     } catch (error) {
       console.error('Error requesting appointment:', error);
-      setErrorMessage('Failed to submit appointment request. Please try again.');
+      alert('Failed to submit appointment request.');
     }
   };
 
@@ -356,37 +275,6 @@ const PatientAppointments = () => {
             Request Appointment
           </button>
         </div>
-
-        {/* Success and Error Messages */}
-        {successMessage && (
-          <div className="mb-6 bg-green-50 p-4 rounded-md">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-green-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <div className="ml-3">
-                <p className="text-sm font-medium text-green-800">{successMessage}</p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {errorMessage && (
-          <div className="mb-6 bg-red-50 p-4 rounded-md">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <div className="ml-3">
-                <p className="text-sm font-medium text-red-800">{errorMessage}</p>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Filters Section */}
         <div className="bg-white shadow-md rounded-lg p-6 mb-6">
@@ -461,15 +349,15 @@ const PatientAppointments = () => {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredAppointments.map((appointment) => (
-                  <tr key={appointment._id || appointment.id}>
+                  <tr key={appointment.id}>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {appointment.doctorName}
+                      {appointment.doctorName || appointment.doctorId}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {appointment.hospitalName}
+                      {appointment.hospitalName || appointment.hospital}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {appointment.formattedDate}
+                      {appointment.date}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {appointment.time}
@@ -479,10 +367,10 @@ const PatientAppointments = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        appointment.status === 'confirmed' ? 'bg-green-100 text-green-800' :
-                        appointment.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                        appointment.status === 'scheduled' ? 'bg-blue-100 text-blue-800' :
-                        appointment.status === 'completed' ? 'bg-gray-100 text-gray-800' :
+                        appointment.status === 'Confirmed' ? 'bg-green-100 text-green-800' :
+                        appointment.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
+                        appointment.status === 'Scheduled' ? 'bg-blue-100 text-blue-800' :
+                        appointment.status === 'Completed' ? 'bg-gray-100 text-gray-800' :
                         'bg-red-100 text-red-800'
                       }`}>
                         {appointment.status}
@@ -490,15 +378,7 @@ const PatientAppointments = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       <div className="flex space-x-2">
-                        <button 
-                          onClick={() => handleViewAppointment(appointment)}
-                          className="px-3 py-1 bg-teal-600 text-white rounded-md hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500"
-                        >
-                          View
-                        </button>
-                        {(appointment.status === 'Pending' || appointment.status === 'Confirmed' || 
-                          appointment.status === 'pending' || appointment.status === 'confirmed' ||
-                          appointment.status === 'Scheduled' || appointment.status === 'scheduled') && (
+                        {(appointment.status === 'Pending' || appointment.status === 'Confirmed' || appointment.status === 'Scheduled') && (
                           <button
                             onClick={() => handleCancelAppointment(appointment)}
                             className="px-3 py-1 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
@@ -521,7 +401,7 @@ const PatientAppointments = () => {
 
         {/* View Appointment Modal */}
         {isViewModalOpen && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
             <div className="bg-white rounded-lg shadow-lg w-full max-w-2xl p-6">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-semibold text-gray-900">Appointment Details</h2>
@@ -539,20 +419,20 @@ const PatientAppointments = () => {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <p className="text-sm font-medium text-gray-500">Doctor</p>
-                      <p className="mt-1">{selectedAppointment.doctorName}</p>
+                      <p className="mt-1">{selectedAppointment.doctorName || selectedAppointment.doctorId}</p>
                     </div>
                     <div>
                       <p className="text-sm font-medium text-gray-500">Hospital</p>
-                      <p className="mt-1">{selectedAppointment.hospitalName}</p>
+                      <p className="mt-1">{selectedAppointment.hospitalName || selectedAppointment.hospital}</p>
                     </div>
                     <div>
                       <p className="text-sm font-medium text-gray-500">Status</p>
                       <p className="mt-1">
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          selectedAppointment.status === 'Confirmed' || selectedAppointment.status === 'confirmed' ? 'bg-green-100 text-green-800' :
-                          selectedAppointment.status === 'Pending' || selectedAppointment.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                          selectedAppointment.status === 'Scheduled' || selectedAppointment.status === 'scheduled' ? 'bg-blue-100 text-blue-800' :
-                          selectedAppointment.status === 'Completed' || selectedAppointment.status === 'completed' ? 'bg-gray-100 text-gray-800' :
+                          selectedAppointment.status === 'Confirmed' ? 'bg-green-100 text-green-800' :
+                          selectedAppointment.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
+                          selectedAppointment.status === 'Scheduled' ? 'bg-blue-100 text-blue-800' :
+                          selectedAppointment.status === 'Completed' ? 'bg-gray-100 text-gray-800' :
                           'bg-red-100 text-red-800'
                         }`}>
                           {selectedAppointment.status}
@@ -561,7 +441,7 @@ const PatientAppointments = () => {
                     </div>
                     <div>
                       <p className="text-sm font-medium text-gray-500">Date</p>
-                      <p className="mt-1">{selectedAppointment.formattedDate || formatDate(selectedAppointment.date)}</p>
+                      <p className="mt-1">{selectedAppointment.date}</p>
                     </div>
                     <div>
                       <p className="text-sm font-medium text-gray-500">Time</p>
@@ -579,9 +459,7 @@ const PatientAppointments = () => {
                     <p className="mt-1">{selectedAppointment.notes || 'No additional notes.'}</p>
                   </div>
                   
-                  {(selectedAppointment.status === 'Pending' || selectedAppointment.status === 'pending' || 
-                    selectedAppointment.status === 'Confirmed' || selectedAppointment.status === 'confirmed' || 
-                    selectedAppointment.status === 'Scheduled' || selectedAppointment.status === 'scheduled') && (
+                  {(selectedAppointment.status === 'Pending' || selectedAppointment.status === 'Confirmed' || selectedAppointment.status === 'Scheduled') && (
                     <div className="pt-4 border-t border-gray-200">
                       <button
                         onClick={() => {
@@ -602,7 +480,7 @@ const PatientAppointments = () => {
 
         {/* Request Appointment Modal */}
         {isRequestModalOpen && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
             <div className="bg-white rounded-lg shadow-lg w-full max-w-2xl p-6">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-semibold text-gray-900">Request New Appointment</h2>
@@ -639,7 +517,7 @@ const PatientAppointments = () => {
                       >
                         <option value="">Select a doctor</option>
                         {doctors.map((doctor) => (
-                          <option key={doctor._id} value={doctor._id}>
+                          <option key={doctor.id} value={doctor.id}>
                             {doctor.firstName + ' ' + doctor.lastName}
                           </option>
                         ))}
@@ -664,7 +542,7 @@ const PatientAppointments = () => {
                       >
                         <option value="">Select a hospital</option>
                         {hospitals.map((hospital) => (
-                          <option key={hospital._id} value={hospital._id}>
+                          <option key={hospital.id} value={hospital.id}>
                             {hospital.name}
                           </option>
                         ))}
@@ -716,18 +594,18 @@ const PatientAppointments = () => {
                   
                   <div>
                     <label htmlFor="purpose" className="block text-sm font-medium text-gray-700">
-                      Purpose of Visit <span className="text-red-500">*</span>
+                      Purpose
                     </label>
                     <input
                       id="purpose"
-                      name="purpose"
                       type="text"
+                      name="purpose"
+                      placeholder="Purpose of the appointment"
                       value={requestForm.purpose}
                       onChange={handleRequestFormChange}
                       className={`mt-1 block w-full px-3 py-2 border ${
                         formErrors.purpose ? 'border-red-500' : 'border-gray-300'
                       } rounded-md shadow-sm focus:outline-none focus:ring-teal-500 focus:border-teal-500 sm:text-sm`}
-                      placeholder="E.g., Regular checkup, Consultation, Follow-up"
                       required
                     />
                     {formErrors.purpose && (
@@ -773,7 +651,7 @@ const PatientAppointments = () => {
 
         {/* Cancel Appointment Modal */}
         {isCancelModalOpen && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
             <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-6">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-semibold text-gray-900">Cancel Appointment</h2>
@@ -789,30 +667,21 @@ const PatientAppointments = () => {
               {selectedAppointment && (
                 <div className="space-y-4">
                   <p className="text-gray-700">
-                    Are you sure you want to cancel your appointment with {selectedAppointment.doctorName} on {selectedAppointment.formattedDate || formatDate(selectedAppointment.date)} at {selectedAppointment.time}?
+                    Are you sure you want to cancel your appointment with {selectedAppointment.doctorName || selectedAppointment.doctorId} on {selectedAppointment.date} at {selectedAppointment.time}?
                   </p>
                   
                   <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
                     <button
                       onClick={() => setIsCancelModalOpen(false)}
                       className="px-3 py-1 bg-gray-600 text-white rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500"
-                      disabled={cancelLoading}
                     >
                       No, Keep It
                     </button>
                     <button
                       onClick={confirmCancelAppointment}
-                      className="px-3 py-1 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 flex items-center"
-                      disabled={cancelLoading}
+                      className="px-3 py-1 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
                     >
-                      {cancelLoading ? (
-                        <>
-                          <div className="animate-spin h-4 w-4 mr-2 border-t-2 border-b-2 border-white rounded-full"></div>
-                          <span>Cancelling...</span>
-                        </>
-                      ) : (
-                        'Yes, Cancel It'
-                      )}
+                      Yes, Cancel It
                     </button>
                   </div>
                 </div>

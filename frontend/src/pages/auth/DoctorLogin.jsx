@@ -52,23 +52,22 @@ const Login = () => {
   
     try {
       // Make the API call to the login endpoint
-      const response = await api.post('/api/patient/login', formData);
+      const response = await api.post('/api/doctor/login', formData);
   
       // Check if the response indicates success (status code 2xx)
       if (response.status >= 200 && response.status < 300) {
         // Extract user data and token from the response
-        const { user, token } = response.data;
+        const { doc, token } = response.data;
   
         // Save the token in localStorage (or cookies) for future authenticated requests
         localStorage.setItem('accessToken', token);
   
         // Save user data in localStorage (optional, depending on your app's needs)
-        localStorage.setItem('user', JSON.stringify(user));
+        localStorage.setItem('doc', JSON.stringify(doc));
 
-        console.log(user)
-        // console.log('patient logged in')
-        navigate('/patient/dashboard');
-  
+        console.log(doc)
+        navigate('/doctor/dashboard')
+        
       } else {
         // Handle unexpected response status
         throw new Error('Login failed. Please check your credentials.');
@@ -88,12 +87,6 @@ const Login = () => {
       <div className="max-w-md w-full bg-white shadow-md rounded-lg p-8">
         <div className="text-center mb-6">
           <h2 className="text-3xl font-extrabold text-gray-900">Sign in to your account</h2>
-          <p className="mt-2 text-sm text-gray-600">
-            Or{' '}
-            <Link to="/register" className="font-medium text-teal-600 hover:text-teal-500">
-              create a new account
-            </Link>
-          </p>
         </div>
         
         {errors.general && (

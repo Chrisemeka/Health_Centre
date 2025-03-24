@@ -8,10 +8,11 @@ const AdminLayout = () => {
   
   const sidebarItems = [
     { label: 'Dashboard', path: '/admin/dashboard', icon: 'dashboard' },
-    { label: 'Users', path: '/admin/create-user', icon: 'user' },
+    { label: 'Doctors', path: '/admin/create-doctor', icon: 'user' },
+    { label: 'Hospitals', path: '/admin/hospitals', icon: 'dashboard' },
     // { label: 'Patients', path: '/admin/patients', icon: 'users' },
     // { label: 'Appointments', path: '/admin/appointments', icon: 'calendar' },
-    { label: 'Reports', path: '/admin/system-logs', icon: 'clipboard-list' },
+    // { label: 'Reports', path: '/admin/system-logs', icon: 'clipboard-list' },
     // { label: 'Settings', path: '/admin/settings', icon: 'cog' },
   ];
 

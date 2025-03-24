@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import api from '../../api';
 
 const DoctorDashboard = () => {
   const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState('')
   const [stats, setStats] = useState({
     todayAppointments: 0,
     pendingAppointments: 0,
@@ -10,10 +12,10 @@ const DoctorDashboard = () => {
     recentRecords: 0
   });
   
-  // Mock data for today's appointments
+  // Today's appointments
   const [todayAppointments, setTodayAppointments] = useState([]);
   
-  // Mock data for pending appointment requests
+  // Pending appointment requests
   const [pendingAppointments, setPendingAppointments] = useState([]);
   
   // Modal states
@@ -39,89 +41,71 @@ const DoctorDashboard = () => {
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
 
+  // Set other data (user, stats, pending appointments, etc.)
   useEffect(() => {
-    // Simulate API call to fetch dashboard data
+    const userData = localStorage.getItem('doc');
+    if (userData) {
+      const userInfo = JSON.parse(userData);
+      console.log(userInfo);
+      setUser(userInfo);
+    }
+  }, []);
+
+  useEffect(() => {
     const fetchDashboardData = async () => {
       setLoading(true);
       
       try {
-        // In a real app, these would be API calls
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Fetch appointments from the API
+        const response = await api.get('/api/doctor/appointments');
+        console.log('Appointments data:', response.data);
+        const appointmentsData = response.data;
         
-        // Mock data
-        setStats({
-          todayAppointments: 4,
-          pendingAppointments: 3,
-          totalPatients: 128,
-          recentRecords: 12
+        // Get today's date in the same format as the API response
+        const today = new Date().toISOString().split('T')[0];
+        
+        // Filter appointments for today
+        const todayAppointments = appointmentsData.filter(appointment => {
+          const appointmentDate = new Date(appointment.date).toISOString().split('T')[0];
+          return appointmentDate === today;
         });
+
+        // Filter appointments with the pending status
+        const pendingAppointments = appointmentsData.filter(appointment => 
+          appointment.status === "Pending" || !appointment.status
+        );
         
-        // Mock today's appointments
-        setTodayAppointments([
-          {
-            id: 1,
-            patientName: 'John Doe',
-            patientId: 'P-12345',
-            time: '09:30 AM',
-            purpose: 'Annual Checkup',
-            status: 'Confirmed'
-          },
-          {
-            id: 2,
-            patientName: 'Sarah Johnson',
-            patientId: 'P-12346',
-            time: '10:15 AM',
-            purpose: 'Follow-up Consultation',
-            status: 'Checked In'
-          },
-          {
-            id: 3,
-            patientName: 'Robert Smith',
-            patientId: 'P-12347',
-            time: '11:00 AM',
-            purpose: 'Blood Pressure Monitoring',
-            status: 'Confirmed'
-          },
-          {
-            id: 4,
-            patientName: 'Emily Wilson',
-            patientId: 'P-12348',
-            time: '02:30 PM',
-            purpose: 'Post-Surgery Follow-up',
-            status: 'Confirmed'
-          }
-        ]);
+        // Count confirmed appointments
+        const confirmedAppointments = appointmentsData.filter(appointment => 
+          appointment.status === "Confirmed" || appointment.status === "Checked In" || appointment.status === "Completed"
+        );
         
-        // Mock pending appointment requests
-        setPendingAppointments([
-          {
-            id: 1,
-            patientName: 'Michael Brown',
-            patientId: 'P-12349',
-            requestedDate: '2025-03-15',
-            requestedTime: '10:00 AM',
-            purpose: 'New Patient Consultation',
-            notes: 'First-time visit for chronic knee pain'
-          },
-          {
-            id: 2,
-            patientName: 'Jennifer Lee',
-            patientId: 'P-12350',
-            requestedDate: '2025-03-16',
-            requestedTime: '11:30 AM',
-            purpose: 'Medication Review',
-            notes: 'Review effectiveness of hypertension medication'
-          },
-          {
-            id: 3,
-            patientName: 'David Martinez',
-            patientId: 'P-12351',
-            requestedDate: '2025-03-17',
-            requestedTime: '09:00 AM',
-            purpose: 'Lab Result Discussion',
-            notes: 'Need to discuss recent blood work results'
-          }
-        ]);
+        // Set today's appointments in state
+        setTodayAppointments(todayAppointments);
+        setPendingAppointments(pendingAppointments);
+        
+        // Fetch recent medical records count (use real API call)
+        try {
+          const recentRecordsResponse = await api.get('/api/doctor/records/recent');
+          const recentRecordsCount = recentRecordsResponse.data.count || 0;
+          
+          // Update stats
+          setStats({
+            todayAppointments: todayAppointments.length,
+            pendingAppointments: pendingAppointments.length,
+            totalPatients: confirmedAppointments.length,
+            recentRecords: recentRecordsCount
+          });
+        } catch (error) {
+          console.error('Error fetching recent records count:', error);
+          // If records API fails, still update the other stats
+          setStats({
+            todayAppointments: todayAppointments.length,
+            pendingAppointments: pendingAppointments.length,
+            totalPatients: confirmedAppointments.length,
+            recentRecords: 0
+          });
+        }
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
       } finally {
@@ -143,24 +127,17 @@ const DoctorDashboard = () => {
       setIsSearching(true);
       
       try {
-        // In a real app, this would be an API call
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // Make an API call to search for patients
+        const response = await api.get(`/api/doctor/patients/search?query=${searchTerm}`);
         
-        // Mock search results
-        const mockResults = [
-          { id: 'P-12345', name: 'John Doe', dateOfBirth: '1985-05-15' },
-          { id: 'P-12346', name: 'Sarah Johnson', dateOfBirth: '1990-08-21' },
-          { id: 'P-12347', name: 'Robert Smith', dateOfBirth: '1978-11-03' },
-          { id: 'P-12348', name: 'Emily Wilson', dateOfBirth: '1992-04-17' },
-          { id: 'P-12349', name: 'Michael Brown', dateOfBirth: '1982-09-28' },
-        ].filter(patient => 
-          patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          patient.id.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-        
-        setSearchResults(mockResults);
+        if (response.data) {
+          setSearchResults(response.data);
+        } else {
+          setSearchResults([]);
+        }
       } catch (error) {
         console.error('Error searching patients:', error);
+        setSearchResults([]);
       } finally {
         setIsSearching(false);
       }
@@ -188,8 +165,8 @@ const DoctorDashboard = () => {
     
     // Initialize reschedule form with the requested date and time
     setRescheduleForm({
-      date: appointment.requestedDate,
-      time: appointment.requestedTime,
+      date: appointment.date || '',
+      time: appointment.time || '',
       notes: ''
     });
     
@@ -212,20 +189,43 @@ const DoctorDashboard = () => {
     }
   };
 
-  const handleViewRecords = (patientId) => {
+  const handleViewRecords = async (patientId) => {
     setSelectedPatientId(patientId);
     setOtpValue('');
     setOtpError('');
-    setIsOtpModalOpen(true);
+    
+    try {
+      // Request OTP from the server
+      const response = await api.post(`/api/doctor/patients/${patientId}/request-otp`);
+      if (response.status === 200) {
+        setIsOtpModalOpen(true);
+      } else {
+        setOtpError('Failed to request OTP. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error requesting OTP:', error);
+      setOtpError('Failed to request OTP. Please try again.');
+    }
   };
 
-  const handleOtpSubmit = () => {
-    // Check if OTP is valid (for demo, we'll use "123456" as the valid OTP)
-    if (otpValue === "123456") {
-      setIsOtpModalOpen(false);
-      // Navigate to patient records
-      window.location.href = `/doctor/patient-records?id=${selectedPatientId}`;
-    } else {
+  const handleOtpSubmit = async () => {
+    if (!otpValue) {
+      setOtpError('Please enter the OTP.');
+      return;
+    }
+  
+    try {
+      // Validate OTP with the server
+      const response = await api.post(`/api/doctor/patients/${selectedPatientId}/records`, { otp: otpValue });
+      if (response.status === 200) {
+        setIsOtpModalOpen(false);
+        // Navigate to patient records
+        window.location.href = `/doctor/patient-records?id=${selectedPatientId}`;
+      } else {
+        setOtpError('Invalid OTP. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error validating OTP:', error);
       setOtpError('Invalid OTP. Please try again.');
     }
   };
@@ -253,18 +253,28 @@ const DoctorDashboard = () => {
 
   const confirmAppointmentRequest = async () => {
     try {
-      // In a real app, this would be an API call
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Update the appointment status to "Confirmed"
+      await api.patch(`/api/doctor/appointments/${selectedAppointment._id}/status`, {
+        status: 'Confirmed'
+      });
       
       // Remove the appointment from pending requests
       setPendingAppointments(prevAppointments => 
-        prevAppointments.filter(apt => apt.id !== selectedAppointment.id)
+        prevAppointments.filter(apt => apt._id !== selectedAppointment._id)
       );
+      
+      // Update the stats
+      setStats(prevStats => ({
+        ...prevStats,
+        pendingAppointments: prevStats.pendingAppointments - 1,
+        totalPatients: prevStats.totalPatients + 1 // Increment confirmed appointments count
+      }));
       
       setIsConfirmModalOpen(false);
       alert('Appointment confirmed successfully.');
     } catch (error) {
       console.error('Error confirming appointment:', error);
+      alert('Failed to confirm appointment. Please try again.');
     }
   };
 
@@ -278,19 +288,37 @@ const DoctorDashboard = () => {
     }
     
     try {
-      // In a real app, this would be an API call
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // API call to reschedule
+      await api.patch(`/api/doctor/appointments/${selectedAppointment._id}/reschedule`, {
+        date: rescheduleForm.date,
+        time: rescheduleForm.time,
+        notes: rescheduleForm.notes
+      });
       
       // Remove the appointment from pending requests
       setPendingAppointments(prevAppointments => 
-        prevAppointments.filter(apt => apt.id !== selectedAppointment.id)
+        prevAppointments.filter(apt => apt._id !== selectedAppointment._id)
       );
+      
+      // Update the stats
+      setStats(prevStats => ({
+        ...prevStats,
+        pendingAppointments: prevStats.pendingAppointments - 1
+      }));
       
       setIsRescheduleModalOpen(false);
       alert('Appointment rescheduled successfully.');
     } catch (error) {
       console.error('Error rescheduling appointment:', error);
+      alert('Failed to reschedule appointment. Please try again.');
     }
+  };
+
+  // Format date function
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleDateString();
   };
 
   return (
@@ -298,7 +326,7 @@ const DoctorDashboard = () => {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold text-gray-900">Doctor Dashboard</h1>
         <p className="text-sm text-gray-500">
-          Welcome back, Dr. Smith
+          Welcome back, {user.firstName ? `${user.firstName} ${user.lastName}` : 'Doctor'}
         </p>
       </div>
 
@@ -311,7 +339,7 @@ const DoctorDashboard = () => {
           <input
             id="quickSearch"
             type="text"
-            placeholder="Search by patient name or ID..."
+            placeholder="Search by patient name or email..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-teal-500 focus:border-teal-500 sm:text-sm"
@@ -326,11 +354,11 @@ const DoctorDashboard = () => {
               ) : searchResults.length > 0 ? (
                 <ul className="py-1">
                   {searchResults.map((patient) => (
-                    <li key={patient.id} className="px-4 py-2 hover:bg-gray-100">
-                      <Link to={`/doctor/patient-records?id=${patient.id}`} className="flex flex-col">
-                        <span className="font-medium text-gray-900">{patient.name}</span>
+                    <li key={patient._id} className="px-4 py-2 hover:bg-gray-100">
+                      <Link to={`/doctor/patient-records?id=${patient._id}`} className="flex flex-col">
+                        <span className="font-medium text-gray-900">{patient.firstName} {patient.lastName}</span>
                         <span className="text-sm text-gray-500">
-                          ID: {patient.id} | DOB: {patient.dateOfBirth}
+                          ID: {patient._id} | Email: {patient.email}
                         </span>
                       </Link>
                     </li>
@@ -384,7 +412,7 @@ const DoctorDashboard = () => {
               </svg>
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-green-100">Total Patients</p>
+              <p className="text-sm font-medium text-green-100">Confirmed Appointments</p>
               <p className="text-2xl font-semibold">{stats.totalPatients}</p>
             </div>
           </div>
@@ -447,9 +475,9 @@ const DoctorDashboard = () => {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {todayAppointments.map((appointment) => (
-                  <tr key={appointment.id}>
+                  <tr key={appointment._id}>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {appointment.time}
+                      {appointment.time || new Date(appointment.date).toLocaleTimeString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {appointment.patientName}
@@ -466,9 +494,10 @@ const DoctorDashboard = () => {
                         appointment.status === 'Checked In' ? 'bg-green-100 text-green-800' :
                         appointment.status === 'Completed' ? 'bg-gray-100 text-gray-800' :
                         appointment.status === 'Cancelled' ? 'bg-red-100 text-red-800' :
+                        appointment.status === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
                         'bg-yellow-100 text-yellow-800'
                       }`}>
-                        {appointment.status}
+                        {appointment.status || 'Pending'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
@@ -485,7 +514,6 @@ const DoctorDashboard = () => {
                         >
                           Records
                         </button>
-                        
                       </div>
                     </td>
                   </tr>
@@ -519,6 +547,9 @@ const DoctorDashboard = () => {
                     Patient
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Patient ID
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Requested Date
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -534,15 +565,18 @@ const DoctorDashboard = () => {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {pendingAppointments.map((appointment) => (
-                  <tr key={appointment.id}>
+                  <tr key={appointment._id}>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {appointment.patientName}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {appointment.requestedDate}
+                      {appointment.patientId}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {appointment.requestedTime}
+                      {formatDate(appointment.date)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {appointment.time || new Date(appointment.date).toLocaleTimeString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {appointment.purpose}
@@ -595,8 +629,12 @@ const DoctorDashboard = () => {
                       <p className="mt-1">{selectedAppointment.patientId}</p>
                     </div>
                     <div>
+                      <p className="text-sm font-medium text-gray-500">Date</p>
+                      <p className="mt-1">{formatDate(selectedAppointment.date)}</p>
+                    </div>
+                    <div>
                       <p className="text-sm font-medium text-gray-500">Time</p>
-                      <p className="mt-1">{selectedAppointment.time}</p>
+                      <p className="mt-1">{selectedAppointment.time || new Date(selectedAppointment.date).toLocaleTimeString()}</p>
                     </div>
                     <div>
                       <p className="text-sm font-medium text-gray-500">Status</p>
@@ -608,7 +646,7 @@ const DoctorDashboard = () => {
                           selectedAppointment.status === 'Cancelled' ? 'bg-red-100 text-red-800' :
                           'bg-yellow-100 text-yellow-800'
                         }`}>
-                          {selectedAppointment.status}
+                          {selectedAppointment.status || 'Pending'}
                         </span>
                       </p>
                     </div>
@@ -620,21 +658,53 @@ const DoctorDashboard = () => {
                   </div>
                   
                   <div className="pt-4 border-t border-gray-200 flex space-x-3">
-                  <button
-                    onClick={() => handleViewRecords(appointment.patientId)}
-                    className="px-4 py-2 text-sm font-medium text-teal-600 bg-teal-50 rounded-md hover:bg-teal-100"
-                  >
-                    Records
-                  </button>
+                    <button
+                      onClick={() => handleViewRecords(selectedAppointment.patientId)}
+                      className="px-4 py-2 text-sm font-medium text-teal-600 bg-teal-50 rounded-md hover:bg-teal-100"
+                    >
+                      View Records
+                    </button>
                     
                     {selectedAppointment.status === 'Confirmed' && (
-                      <button className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700">
+                      <button 
+                        onClick={async () => {
+                          try {
+                            await api.patch(`/api/doctor/appointments/${selectedAppointment._id}/status`, {
+                              status: 'Checked In'
+                            });
+                            setIsViewModalOpen(false);
+                            alert('Patient checked in successfully.');
+                            // Refresh appointments data
+                            window.location.reload();
+                          } catch (error) {
+                            console.error('Error checking in patient:', error);
+                            alert('Failed to check in patient. Please try again.');
+                          }
+                        }}
+                        className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700"
+                      >
                         Check In Patient
                       </button>
                     )}
                     
                     {selectedAppointment.status === 'Checked In' && (
-                      <button className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700">
+                      <button 
+                        onClick={async () => {
+                          try {
+                            await api.patch(`/api/doctor/appointments/${selectedAppointment._id}/status`, {
+                              status: 'Completed'
+                            });
+                            setIsViewModalOpen(false);
+                            alert('Appointment marked as completed.');
+                            // Refresh appointments data
+                            window.location.reload();
+                          } catch (error) {
+                            console.error('Error completing appointment:', error);
+                            alert('Failed to complete appointment. Please try again.');
+                          }
+                        }}
+                        className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700"
+                      >
                         Mark as Completed
                       </button>
                     )}
@@ -665,7 +735,7 @@ const DoctorDashboard = () => {
               {selectedAppointment && (
                 <>
                   <p className="text-gray-700">
-                    Are you sure you want to confirm the appointment request from <span className="font-medium">{selectedAppointment.patientName}</span> for {selectedAppointment.requestedDate} at {selectedAppointment.requestedTime}?
+                    Are you sure you want to confirm the appointment request from <span className="font-medium">{selectedAppointment.patientName}</span> for {formatDate(selectedAppointment.date)} at {selectedAppointment.time || new Date(selectedAppointment.date).toLocaleTimeString()}?
                   </p>
                   
                   <div>
@@ -785,6 +855,46 @@ const DoctorDashboard = () => {
                 className="px-4 py-2 text-sm font-medium text-white bg-teal-600 rounded-md hover:bg-teal-700"
               >
                 Reschedule
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* OTP Modal */}
+      {isOtpModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-md">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h2 className="text-xl font-semibold text-gray-900">Enter OTP</h2>
+            </div>
+            <div className="p-6 space-y-4">
+              <p className="text-gray-700">
+                An OTP has been sent to the patient. Please enter it below to access the records.
+              </p>
+              <input
+                type="text"
+                placeholder="Enter OTP"
+                value={otpValue}
+                onChange={handleOtpChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-teal-500 focus:border-teal-500 sm:text-sm"
+              />
+              {otpError && (
+                <p className="text-sm text-red-600">{otpError}</p>
+              )}
+            </div>
+            <div className="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+              <button
+                onClick={() => setIsOtpModalOpen(false)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleOtpSubmit}
+                className="px-4 py-2 text-sm font-medium text-white bg-teal-600 rounded-md hover:bg-teal-700"
+              >
+                Submit
               </button>
             </div>
           </div>

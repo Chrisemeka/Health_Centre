@@ -14,12 +14,16 @@ exports.doctorLogin = async (req, res) => {
     const { email, password } = req.body;
     const doc = await Doctor.findOne({ email });
     if (!doc) {
-      return res.status(400).json({ error: "Invalid email or password" });
+      return res.status(400).json({ error: "Invalid email" });
     }
+console.log(doc.password)
+console.log(password)
+const hashedPassword = await bcrypt.hash(password, 10);
+console.log(hashedPassword)
 
     const isMatch = await bcrypt.compare(password, doc.password);
     if (!isMatch) {
-      return res.status(400).json({ error: "Invalid email or password" });
+      return res.status(400).json({ error: "Invalid password" });
     }
 
     const token = jwt.sign(
@@ -232,12 +236,14 @@ exports.getPatientRecords = async (req, res) => {
 */
 exports.addMedicalRecord = async (req, res) => {
   try {
+    console.log(req)
     const { otp, recordType, summary, details, documentUrl, imageUrls } = req.body;
     const patient = await Patient.findById(req.params.patientId);
     if (!patient) return res.status(404).json({ message: "Patient not found" });
-
     // Verify OTP
+    console.log({patient, otp})
     const isOTPValid = await OTPService.verifyOTP(patient.email, otp);
+
     if (!isOTPValid) return res.status(401).json({ message: "Invalid OTP" });
 
     const newRecord = new MedicalRecord({

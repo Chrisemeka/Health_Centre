@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import api from '../../api';
 // import { useAuth } from '../../contexts/AuthContext';
 
 const Profile = () => {
 //   const { currentUser } = useAuth();
   const [loading, setLoading] = useState(true);
+  const [saveLoading, setSaveLoading] = useState(false);
   const [profileData, setProfileData] = useState({
     firstName: '',
     lastName: '',
@@ -30,39 +32,51 @@ const Profile = () => {
   const [successMessage, setSuccessMessage] = useState('');
 
   useEffect(() => {
-    // Simulate API call to fetch user profile
-    const fetchUserProfile = async () => {
-      setLoading(true);
-
-      try {
-        // In a real app, this would be an API call
-        await new Promise(resolve => setTimeout(resolve, 1000));
-
-        // Mock data
-        const mockProfile = {
-          firstName: 'John',
-          lastName: 'Doe',
-          email: 'john.doe@example.com',
-          phone: '123-456-7890',
-          dateOfBirth: '1985-05-15',
-          address: '123 Main Street, Anytown, ST 12345',
-          bloodType: 'A+',
-          allergies: 'Penicillin, Peanuts',
-          nextOfKin: 'Jane Doe',
-          nextOfKinRelation: 'Spouse',
-          nextOfKinPhone: '987-654-3210',
-        };
-
-        setProfileData(mockProfile);
-      } catch (error) {
-        console.error('Error fetching user profile:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchUserProfile();
   }, []);
+
+  const fetchUserProfile = async () => {
+    setLoading(true);
+
+    try {
+      // In a real app with API integration
+      const response = await api.get('/api/patient/profile');
+      console.log('Fetched profile data:', response.data);
+      
+      // Use the API response data or fall back to mock data if API call fails
+      setProfileData(response.data || {
+        firstName: 'John',
+        lastName: 'Doe',
+        email: 'john.doe@example.com',
+        phone: '123-456-7890',
+        dateOfBirth: '1985-05-15',
+        address: '123 Main Street, Anytown, ST 12345',
+        bloodType: 'A+',
+        allergies: 'Penicillin, Peanuts',
+        nextOfKin: 'Jane Doe',
+        nextOfKinRelation: 'Spouse',
+        nextOfKinPhone: '987-654-3210',
+      });
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+      // Fallback to mock data in case of error
+      setProfileData({
+        firstName: 'John',
+        lastName: 'Doe',
+        email: 'john.doe@example.com',
+        phone: '123-456-7890',
+        dateOfBirth: '1985-05-15',
+        address: '123 Main Street, Anytown, ST 12345',
+        bloodType: 'A+',
+        allergies: 'Penicillin, Peanuts',
+        nextOfKin: 'Jane Doe',
+        nextOfKinRelation: 'Spouse',
+        nextOfKinPhone: '987-654-3210',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleProfileChange = (e) => {
     const { name, value } = e.target;
@@ -157,11 +171,12 @@ const Profile = () => {
       return;
     }
 
-    setLoading(true);
+    setSaveLoading(true);
 
     try {
-      // In a real app, this would be an API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Send updated profile data to API
+      const response = await api.patch('/api/patient/update-profile', profileData);
+      console.log('Update profile response:', response.data);
 
       setIsEditing(false);
       setSuccessMessage('Profile updated successfully!');
@@ -173,10 +188,10 @@ const Profile = () => {
     } catch (error) {
       console.error('Error updating profile:', error);
       setFormErrors({
-        general: 'Failed to update profile. Please try again.',
+        general: error.response?.data?.message || 'Failed to update profile. Please try again.',
       });
     } finally {
-      setLoading(false);
+      setSaveLoading(false);
     }
   };
 
@@ -191,6 +206,11 @@ const Profile = () => {
 
     try {
       // In a real app, this would be an API call
+      // await api.post('/api/patient/change-password', {
+      //   currentPassword: passwordForm.currentPassword,
+      //   newPassword: passwordForm.newPassword
+      // });
+
       await new Promise(resolve => setTimeout(resolve, 1000));
 
       // Reset form and close modal
@@ -447,9 +467,17 @@ const Profile = () => {
                 <div className="flex justify-end mt-6">
                   <button
                     type="submit"
+                    disabled={saveLoading}
                     className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500"
                   >
-                    Save Changes
+                    {saveLoading ? (
+                      <>
+                        <span className="mr-2">Saving...</span>
+                        <div className="animate-spin h-4 w-4 border-t-2 border-b-2 border-white rounded-full"></div>
+                      </>
+                    ) : (
+                      'Save Changes'
+                    )}
                   </button>
                 </div>
               )}
@@ -521,6 +549,25 @@ const Profile = () => {
                   )}
                 </div>
               </div>
+              
+              {isEditing && (
+                <div className="flex justify-end mt-6">
+                  <button
+                    type="submit"
+                    disabled={saveLoading}
+                    className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500"
+                  >
+                    {saveLoading ? (
+                      <>
+                        <span className="mr-2">Saving...</span>
+                        <div className="animate-spin h-4 w-4 border-t-2 border-b-2 border-white rounded-full"></div>
+                      </>
+                    ) : (
+                      'Save Changes'
+                    )}
+                  </button>
+                </div>
+              )}
             </div>
           </form>
         )}

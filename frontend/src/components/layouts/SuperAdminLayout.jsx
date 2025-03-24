@@ -7,7 +7,8 @@ const SuperAdminLayout = () => {
   
   const sidebarItems = [
     { label: 'Dashboard', path: '/superadmin/dashboard', icon: 'dashboard' },
-    { label: 'Hospitals', path: '/superadmin/hospitals', icon: 'dashboard' },
+    // { label: 'Hospitals', path: '/superadmin/hospitals', icon: 'dashboard' },
+    { label: 'Admins', path: '/superadmin/create-user', icon: 'user' },
     // { label: 'System Logs', path: '/superadmin/system-logs', icon: 'clipboard-list' },
     // { label: 'Settings', path: '/superadmin/settings', icon: 'cog' },
   ];

@@ -1,144 +1,177 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import api from '../../api';
+
 
 const PatientDashboard = () => {
   const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState({firstName: '', lastName: ''});
   const [stats, setStats] = useState({
-    upcomingAppointments: 0,
+    totalAppointments: 0,
     totalRecords: 0,
-    recentDoctorVisits: 0,
-    notifications: 0
+    confirmedAppointments: 0,
+    unreadNotifications: 0
   });
   
-  // Mock data for upcoming appointments
+  // For upcoming appointments
   const [appointments, setAppointments] = useState([]);
   
-  // Mock data for recent medical records
+  // For recent medical records
   const [recentRecords, setRecentRecords] = useState([]);
   
-  // Mock data for notifications
+  // For notifications
   const [notifications, setNotifications] = useState([]);
 
   useEffect(() => {
-    // Simulate API call to fetch dashboard data
-    const fetchDashboardData = async () => {
-      setLoading(true);
-      
-      try {
-        // In a real app, these would be API calls
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // Mock data
-        setStats({
-          upcomingAppointments: 2,
-          totalRecords: 15,
-          recentDoctorVisits: 3,
-          notifications: 4
-        });
-        
-        setAppointments([
-          {
-            id: 1,
-            doctor: 'Dr. Sarah Johnson',
-            hospital: 'Central Hospital',
-            date: '2025-03-15',
-            time: '09:30 AM',
-            purpose: 'Annual Checkup',
-            status: 'Confirmed'
-          },
-          {
-            id: 2,
-            doctor: 'Dr. Michael Chen',
-            hospital: 'City Medical Center',
-            date: '2025-04-02',
-            time: '11:00 AM',
-            purpose: 'Follow-up Consultation',
-            status: 'Pending'
-          }
-        ]);
-        
-        setRecentRecords([
-          {
-            id: 1,
-            type: 'Laboratory Results',
-            hospital: 'Central Hospital',
-            date: '2025-02-28',
-            doctor: 'Dr. Sarah Johnson',
-            summary: 'Blood work results - all normal'
-          },
-          {
-            id: 2,
-            type: 'Prescription',
-            hospital: 'City Medical Center',
-            date: '2025-02-15',
-            doctor: 'Dr. Michael Chen',
-            summary: 'Prescription for hypertension medication'
-          },
-          {
-            id: 3,
-            type: 'Diagnosis',
-            hospital: 'Central Hospital',
-            date: '2025-01-20',
-            doctor: 'Dr. Sarah Johnson',
-            summary: 'Seasonal allergies diagnosis and treatment plan'
-          }
-        ]);
-        
-        setNotifications([
-          {
-            id: 1,
-            message: 'Dr. Johnson updated your medical record',
-            time: '2 hours ago',
-            read: false
-          },
-          {
-            id: 2,
-            message: 'Your upcoming appointment with Dr. Chen has been confirmed',
-            time: '1 day ago',
-            read: false
-          },
-          {
-            id: 3,
-            message: 'New laboratory results are available for review',
-            time: '3 days ago',
-            read: true
-          },
-          {
-            id: 4,
-            message: 'Your prescription has been renewed by Dr. Johnson',
-            time: '1 week ago',
-            read: true
-          }
-        ]);
-      } catch (error) {
-        console.error('Error fetching dashboard data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    
     fetchDashboardData();
   }, []);
 
-  // Mark notification as read
-  const handleMarkAsRead = (notificationId) => {
-    setNotifications(
-      notifications.map((notification) =>
-        notification.id === notificationId
-          ? { ...notification, read: true }
-          : notification
-      )
-    );
+  const fetchDashboardData = async () => {
+    setLoading(true);
+    
+    try {
+      // Get user data from localStorage
+      const userData = localStorage.getItem('user');
+      if (userData) {
+        const user = JSON.parse(userData);
+        setUser(user);
+      }
+
+      // Fetch data in parallel
+      const [
+        appointmentsResponse
+      ] = await Promise.all([
+        api.get('/api/patient/appointments')
+      ]);
+
+      // Set appointments (all appointments)
+      const allAppointments = appointmentsResponse.data || [];
+      
+      // Filter for confirmed appointments
+      const confirmedAppointments = allAppointments.filter(
+        appointment => appointment.status === 'Confirmed' || appointment.status === 'confirmed'
+      );
+      
+      // Count of confirmed appointments - calculated from appointments data
+      const confirmedCount = confirmedAppointments.length;
+      
+      // Set appointments for the table
+      setAppointments(confirmedAppointments);
+      
+      // Mock medical records data since the API call is commented out
+      const records = [];
+      
+      // Create notifications based on upcoming appointments
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // Set to beginning of the day for proper comparison
+      
+      const upcomingAppointments = allAppointments.filter(appointment => {
+        if (!appointment.date) return false;
+        const appointmentDate = new Date(appointment.date);
+        appointmentDate.setHours(0, 0, 0, 0); // Set to beginning of the day for proper comparison
+        return appointmentDate > today; // Only show appointments with dates greater than current date
+      });
+      
+      // Sort upcoming appointments by date
+      upcomingAppointments.sort((a, b) => {
+        return new Date(a.date) - new Date(b.date);
+      });
+      
+      // Convert appointments to notifications
+      const appointmentNotifications = upcomingAppointments.map((appointment, index) => {
+        const appointmentDate = new Date(appointment.date);
+        appointmentDate.setHours(0, 0, 0, 0);
+        const diffDays = Math.round((appointmentDate - today) / (1000 * 60 * 60 * 24));
+        
+        let timeString = '';
+        if (diffDays === 0) {
+          timeString = 'Today';
+        } else if (diffDays === 1) {
+          timeString = 'Tomorrow';
+        } else {
+          timeString = `In ${diffDays} days`;
+        }
+        
+        return {
+          id: index + 1,
+          message: `Upcoming appointment with ${appointment.doctorName || appointment.doctorId || 'Doctor'} at ${appointment.hospitalName || appointment.hospital || 'Hospital'}`,
+          time: `${timeString} (${appointment.date || 'Date not set'} at ${appointment.time || 'Time not set'})`,
+          read: false,
+          appointmentId: appointment._id || appointment.id
+        };
+      });
+      
+      setNotifications(appointmentNotifications);
+      
+      // Set stats - using the calculated confirmed count
+      setStats({
+        totalAppointments: allAppointments.length,
+        totalRecords: records.length,
+        confirmedAppointments: confirmedCount,
+        unreadNotifications: appointmentNotifications.filter(n => !n.read).length
+      });
+      
+      console.log('Stats updated:', {
+        totalAppointments: allAppointments.length,
+        totalRecords: records.length,
+        confirmedAppointments: confirmedCount,
+        unreadNotifications: appointmentNotifications.filter(n => !n.read).length
+      });
+      
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+      
+      // Set default stats in case of error
+      setStats({
+        totalAppointments: 0,
+        totalRecords: 0,
+        confirmedAppointments: 0,
+        unreadNotifications: 0
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
+  // Mark notification as read
+  // const handleMarkAsRead = (notificationId) => {
+  //   setNotifications(
+  //     notifications.map((notification) =>
+  //       notification.id === notificationId
+  //         ? { ...notification, read: true }
+  //         : notification
+  //     )
+  //   );
+    
+  //   // Update the unread notifications count in stats
+  //   setStats({
+  //     ...stats,
+  //     unreadNotifications: notifications.filter(n => !n.read && n.id !== notificationId).length
+  //   });
+  // };
+
   // Mark all notifications as read
-  const handleMarkAllAsRead = () => {
-    setNotifications(
-      notifications.map((notification) => ({
-        ...notification,
-        read: true,
-      }))
-    );
+  // const handleMarkAllAsRead = () => {
+  //   setNotifications(
+  //     notifications.map((notification) => ({
+  //       ...notification,
+  //       read: true,
+  //     }))
+  //   );
+    
+  //   // Update the unread notifications count in stats
+  //   setStats({
+  //     ...stats,
+  //     unreadNotifications: 0
+  //   });
+  // };
+
+  // Format user name safely
+  const getUserName = () => {
+    if (!user) return 'Patient';
+    const firstName = user.firstName || '';
+    const lastName = user.lastName || '';
+    return `${firstName} ${lastName}`.trim() || 'Patient';
   };
 
   return (
@@ -147,12 +180,12 @@ const PatientDashboard = () => {
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-3xl font-extrabold text-gray-900">Patient Dashboard</h1>
           <p className="text-sm text-gray-500">
-            Welcome back, Patient
+            Welcome back, {getUserName()}
           </p>
         </div>
 
         {/* Stats cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <div className="bg-gradient-to-br from-teal-500 to-teal-600 text-white rounded-lg p-6">
             <div className="flex items-center">
               <div className="p-3 rounded-full bg-teal-200 bg-opacity-30">
@@ -161,8 +194,8 @@ const PatientDashboard = () => {
                 </svg>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-teal-100">Upcoming Appointments</p>
-                <p className="text-2xl font-semibold">{stats.upcomingAppointments}</p>
+                <p className="text-sm font-medium text-teal-100">Total Appointments</p>
+                <p className="text-2xl font-semibold">{stats.totalAppointments}</p>
               </div>
             </div>
           </div>
@@ -189,22 +222,8 @@ const PatientDashboard = () => {
                 </svg>
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-purple-100">Recent Doctor Visits</p>
-                <p className="text-2xl font-semibold">{stats.recentDoctorVisits}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-lg p-6">
-            <div className="flex items-center">
-              <div className="p-3 rounded-full bg-blue-200 bg-opacity-30">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                </svg>
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-blue-100">Notifications</p>
-                <p className="text-2xl font-semibold">{notifications.filter(n => !n.read).length}</p>
+                <p className="text-sm font-medium text-purple-100">Confirmed Appointments</p>
+                <p className="text-2xl font-semibold">{stats.confirmedAppointments}</p>
               </div>
             </div>
           </div>
@@ -213,7 +232,7 @@ const PatientDashboard = () => {
         {/* Upcoming Appointments */}
         <div className="bg-white shadow-md rounded-lg p-6 mt-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-gray-900">Upcoming Appointments</h2>
+            <h2 className="text-xl font-semibold text-gray-900">Confirmed Appointments</h2>
             <Link to="/patient/appointments">
               <button className="px-3 py-1 bg-gray-600 text-white rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500">
                 View All
@@ -249,32 +268,32 @@ const PatientDashboard = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {appointments.map((appointment) => (
-                  <tr key={appointment.id}>
+                {appointments.map((appointment, index) => (
+                  <tr key={appointment._id || appointment.id || index}>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {appointment.doctor}
+                      {appointment.doctorName || appointment.doctorId || 'Not specified'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {appointment.hospital}
+                      {appointment.hospitalName || appointment.hospital || 'Not specified'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {appointment.date}
+                      {appointment.date || 'Not specified'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {appointment.time}
+                      {appointment.time || 'Not specified'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {appointment.purpose}
+                      {appointment.purpose || 'Not specified'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       <span
                         className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          appointment.status === 'Confirmed'
+                          appointment.status === 'Confirmed' || appointment.status === 'confirmed'
                             ? 'bg-green-100 text-green-800'
                             : 'bg-yellow-100 text-yellow-800'
                         }`}
                       >
-                        {appointment.status}
+                        {appointment.status || 'Pending'}
                       </span>
                     </td>
                   </tr>
@@ -283,7 +302,7 @@ const PatientDashboard = () => {
             </table>
           ) : (
             <div className="text-center py-6 text-gray-500">
-              <p>No upcoming appointments.</p>
+              <p>No confirmed appointments.</p>
               <Link to="/patient/appointments">
                 <button className="px-3 py-1 bg-teal-600 text-white rounded-md hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500 mt-2">
                   Schedule Now
@@ -332,27 +351,29 @@ const PatientDashboard = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {recentRecords.map((record) => (
-                  <tr key={record.id}>
+                {recentRecords.slice(0, 5).map((record, index) => (
+                  <tr key={record._id || record.id || index}>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {record.type}
+                      {record.type || 'Not specified'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {record.hospital}
+                      {record.hospital || record.hospitalName || 'Not specified'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {record.date}
+                      {record.date || (record.timestamp || record.createdAt ? new Date(record.timestamp || record.createdAt).toLocaleDateString() : 'Not specified')}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {record.doctor}
+                      {record.doctor || record.doctorName || 'Not specified'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {record.summary}
+                      {record.summary || record.description || "No summary available"}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      <button className="px-3 py-1 bg-gray-600 text-white rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500">
-                        View
-                      </button>
+                      <Link to={`/patient/medical-records/${record._id || record.id || index}`}>
+                        <button className="px-3 py-1 bg-gray-600 text-white rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500">
+                          View
+                        </button>
+                      </Link>
                     </td>
                   </tr>
                 ))}
@@ -365,17 +386,17 @@ const PatientDashboard = () => {
           )}
         </div>
 
-        {/* Notifications */}
+        {/* Notifications - Showing upcoming appointments */}
         <div className="bg-white shadow-md rounded-lg p-6 mt-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-gray-900">Recent Notifications</h2>
-            <button
+            <h2 className="text-xl font-semibold text-gray-900">Upcoming Appointments</h2>
+            {/* <button
               onClick={handleMarkAllAsRead}
               disabled={!notifications.some(n => !n.read)}
               className="px-3 py-1 bg-gray-600 text-white rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 disabled:opacity-50"
             >
               Mark All as Read
-            </button>
+            </button> */}
           </div>
           {loading ? (
             <div className="flex justify-center p-4">
@@ -399,12 +420,12 @@ const PatientDashboard = () => {
                   </div>
                   {!notification.read && (
                     <div className="ml-4 flex-shrink-0">
-                      <button
+                      {/* <button
                         onClick={() => handleMarkAsRead(notification.id)}
                         className="px-3 py-1 bg-gray-600 text-white rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500"
                       >
                         Mark as Read
-                      </button>
+                      </button> */}
                     </div>
                   )}
                 </div>
@@ -412,7 +433,12 @@ const PatientDashboard = () => {
             </div>
           ) : (
             <div className="text-center py-6 text-gray-500">
-              <p>No notifications.</p>
+              <p>No upcoming appointments.</p>
+              <Link to="/patient/appointments">
+                <button className="px-3 py-1 bg-teal-600 text-white rounded-md hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500 mt-2">
+                  Schedule an Appointment
+                </button>
+              </Link>
             </div>
           )}
         </div>

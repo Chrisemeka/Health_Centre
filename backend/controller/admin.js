@@ -101,8 +101,6 @@ exports.createDoctor = async (req, res) => {
       return res.status(400).json({ message: "A doctor with this email already exists." });
     }
 
-    // Hash password (if the Doctor schema expects a hashed password)
-    const hashedPassword = await bcrypt.hash(password, 10);
 
     // Create new doctor record
     const newDoc = new Doctor({
@@ -115,7 +113,7 @@ exports.createDoctor = async (req, res) => {
       dateOfBirth: DOB,
       gender,
       address,
-      password: hashedPassword,
+      password,
       status: "Active",   // or default
     });
 

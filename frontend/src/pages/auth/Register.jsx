@@ -11,12 +11,18 @@ const Register = () => {
     password: '',
     confirmPassword: '',
     dateOfBirth: '',
+    gender: 'Male',
     phone: '',
+    address: '',
+    bloodType: '',
+    allergies: '',
     nextOfKin: '',
+    nextOfKinRelation: '',
     nextOfKinPhone: '',
     role: 'patient'
   });
   const [errors, setErrors] = useState({});
+  const [success, setSuccess] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [step, setStep] = useState(1);
 
@@ -78,6 +84,10 @@ const Register = () => {
       newErrors.phone = 'Phone number is required';
     }
     
+    if (!formData.address.trim()) {
+      newErrors.address = 'Address is required';
+    }
+    
     if (!formData.nextOfKin.trim()) {
       newErrors.nextOfKin = 'Next of kin is required';
     }
@@ -115,14 +125,20 @@ const Register = () => {
     setIsLoading(true);
     
     try {
+      // Remove confirmPassword before sending to API
+      const { confirmPassword, ...dataToSend } = formData;
+      
       // Make the API call to the registration endpoint
-      const response = await api.post('/api/auth/signup', formData);
+      const response = await api.post('/api/patient/register', dataToSend);
+      console.log(dataToSend);
   
       // Check if the response indicates success (status code 2xx)
       if (response.status >= 200 && response.status < 300) {
         // Show success message and redirect to login
         alert('Registration successful! You can now log in.');
-        // navigate('/login');
+        setSuccess('Registration successful! You can now verify your account by clicking the link sent to your email.');
+        navigate('/login');
+
       } else {
         // Handle unexpected response status
         throw new Error('Registration failed. Please try again.');
@@ -161,6 +177,16 @@ const Register = () => {
               </div>
               <div className="ml-3">
                 <h3 className="text-sm font-medium text-red-800">{errors.general}</h3>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {success && (
+          <div className="mb-4 bg-green-50 p-4 rounded-md">
+            <div>
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-green-800">{success}</h3>
               </div>
             </div>
           </div>
@@ -310,6 +336,28 @@ const Register = () => {
               </div>
               
               <div>
+                <label htmlFor="gender" className="block text-sm font-medium text-gray-700">
+                  Gender
+                </label>
+                <select
+                  id="gender"
+                  name="gender"
+                  value={formData.gender}
+                  onChange={handleChange}
+                  className={`w-full px-3 py-2 border ${
+                    errors.gender ? 'border-red-500' : 'border-gray-300'
+                  } rounded-md shadow-sm focus:outline-none focus:ring-teal-500 focus:border-teal-500 sm:text-sm`}
+                >
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                </select>
+                {errors.gender && (
+                  <p className="mt-2 text-sm text-red-600">{errors.gender}</p>
+                )}
+              </div>
+              
+              <div>
                 <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
                   Phone Number
                 </label>
@@ -326,6 +374,75 @@ const Register = () => {
                 {errors.phone && (
                   <p className="mt-2 text-sm text-red-600">{errors.phone}</p>
                 )}
+              </div>
+              
+              <div>
+                <label htmlFor="address" className="block text-sm font-medium text-gray-700">
+                  Address
+                </label>
+                <input
+                  id="address"
+                  name="address"
+                  type="text"
+                  value={formData.address}
+                  onChange={handleChange}
+                  className={`w-full px-3 py-2 border ${
+                    errors.address ? 'border-red-500' : 'border-gray-300'
+                  } rounded-md shadow-sm focus:outline-none focus:ring-teal-500 focus:border-teal-500 sm:text-sm`}
+                />
+                {errors.address && (
+                  <p className="mt-2 text-sm text-red-600">{errors.address}</p>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="bloodType" className="block text-sm font-medium text-gray-700">
+                    Blood Type
+                  </label>
+                  <select
+                    id="bloodType"
+                    name="bloodType"
+                    value={formData.bloodType}
+                    onChange={handleChange}
+                    className={`w-full px-3 py-2 border ${
+                      errors.bloodType ? 'border-red-500' : 'border-gray-300'
+                    } rounded-md shadow-sm focus:outline-none focus:ring-teal-500 focus:border-teal-500 sm:text-sm`}
+                  >
+                    <option value="">Select Blood Type</option>
+                    <option value="A+">A+</option>
+                    <option value="A-">A-</option>
+                    <option value="B+">B+</option>
+                    <option value="B-">B-</option>
+                    <option value="AB+">AB+</option>
+                    <option value="AB-">AB-</option>
+                    <option value="O+">O+</option>
+                    <option value="O-">O-</option>
+                    <option value="Unknown">Unknown</option>
+                  </select>
+                  {errors.bloodType && (
+                    <p className="mt-2 text-sm text-red-600">{errors.bloodType}</p>
+                  )}
+                </div>
+                
+                <div>
+                  <label htmlFor="allergies" className="block text-sm font-medium text-gray-700">
+                    Allergies (if any)
+                  </label>
+                  <input
+                    id="allergies"
+                    name="allergies"
+                    type="text"
+                    value={formData.allergies}
+                    onChange={handleChange}
+                    className={`w-full px-3 py-2 border ${
+                      errors.allergies ? 'border-red-500' : 'border-gray-300'
+                    } rounded-md shadow-sm focus:outline-none focus:ring-teal-500 focus:border-teal-500 sm:text-sm`}
+                  />
+                  {errors.allergies && (
+                    <p className="mt-2 text-sm text-red-600">{errors.allergies}</p>
+                  )}
+                </div>
               </div>
               
               <div>
@@ -347,23 +464,44 @@ const Register = () => {
                 )}
               </div>
               
-              <div>
-                <label htmlFor="nextOfKinPhone" className="block text-sm font-medium text-gray-700">
-                  Next of Kin Phone
-                </label>
-                <input
-                  id="nextOfKinPhone"
-                  name="nextOfKinPhone"
-                  type="text"
-                  value={formData.nextOfKinPhone}
-                  onChange={handleChange}
-                  className={`w-full px-3 py-2 border ${
-                    errors.nextOfKinPhone ? 'border-red-500' : 'border-gray-300'
-                  } rounded-md shadow-sm focus:outline-none focus:ring-teal-500 focus:border-teal-500 sm:text-sm`}
-                />
-                {errors.nextOfKinPhone && (
-                  <p className="mt-2 text-sm text-red-600">{errors.nextOfKinPhone}</p>
-                )}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="nextOfKinRelation" className="block text-sm font-medium text-gray-700">
+                    Relationship to Next of Kin
+                  </label>
+                  <input
+                    id="nextOfKinRelation"
+                    name="nextOfKinRelation"
+                    type="text"
+                    value={formData.nextOfKinRelation}
+                    onChange={handleChange}
+                    className={`w-full px-3 py-2 border ${
+                      errors.nextOfKinRelation ? 'border-red-500' : 'border-gray-300'
+                    } rounded-md shadow-sm focus:outline-none focus:ring-teal-500 focus:border-teal-500 sm:text-sm`}
+                  />
+                  {errors.nextOfKinRelation && (
+                    <p className="mt-2 text-sm text-red-600">{errors.nextOfKinRelation}</p>
+                  )}
+                </div>
+                
+                <div>
+                  <label htmlFor="nextOfKinPhone" className="block text-sm font-medium text-gray-700">
+                    Next of Kin Phone
+                  </label>
+                  <input
+                    id="nextOfKinPhone"
+                    name="nextOfKinPhone"
+                    type="text"
+                    value={formData.nextOfKinPhone}
+                    onChange={handleChange}
+                    className={`w-full px-3 py-2 border ${
+                      errors.nextOfKinPhone ? 'border-red-500' : 'border-gray-300'
+                    } rounded-md shadow-sm focus:outline-none focus:ring-teal-500 focus:border-teal-500 sm:text-sm`}
+                  />
+                  {errors.nextOfKinPhone && (
+                    <p className="mt-2 text-sm text-red-600">{errors.nextOfKinPhone}</p>
+                  )}
+                </div>
               </div>
               
               <div className="flex space-x-4">

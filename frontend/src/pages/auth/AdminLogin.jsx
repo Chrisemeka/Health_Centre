@@ -52,7 +52,7 @@ const Login = () => {
   
     try {
       // Make the API call to the login endpoint
-      const response = await api.post('/api/patient/login', formData);
+      const response = await api.post('/api/auth/login', formData);
   
       // Check if the response indicates success (status code 2xx)
       if (response.status >= 200 && response.status < 300) {
@@ -65,10 +65,19 @@ const Login = () => {
         // Save user data in localStorage (optional, depending on your app's needs)
         localStorage.setItem('user', JSON.stringify(user));
 
-        console.log(user)
-        // console.log('patient logged in')
-        navigate('/patient/dashboard');
-  
+        console.log(response.data.user.userType)
+
+        if (response.data.user.userType == 'superAdmin'){
+            console.log(response.data.user.userType)
+            navigate('/superadmin/dashboard')
+        }
+        else if (response.data.user.userType == 'admin'){
+            console.log(response.data.user.userType)
+            navigate('/admin/dashboard')
+        }
+        else {
+            navigate('/')
+        }
       } else {
         // Handle unexpected response status
         throw new Error('Login failed. Please check your credentials.');
@@ -88,12 +97,6 @@ const Login = () => {
       <div className="max-w-md w-full bg-white shadow-md rounded-lg p-8">
         <div className="text-center mb-6">
           <h2 className="text-3xl font-extrabold text-gray-900">Sign in to your account</h2>
-          <p className="mt-2 text-sm text-gray-600">
-            Or{' '}
-            <Link to="/register" className="font-medium text-teal-600 hover:text-teal-500">
-              create a new account
-            </Link>
-          </p>
         </div>
         
         {errors.general && (

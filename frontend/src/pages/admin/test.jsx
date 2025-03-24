@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../api';
 
-const SuperAdminDashboard = () => {
+const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     totalAdmins: 0,
@@ -14,9 +14,8 @@ const SuperAdminDashboard = () => {
   // Recent activity logs
   const [activityLogs, setActivityLogs] = useState([]);
 
-  // Recent admin registrations
-  const [recentAdmins, setRecentAdmins] = useState([]);
-  const [adminsLoading, setAdminsLoading] = useState(true);
+  // Recent user registrations
+  const [recentUsers, setRecentUsers] = useState([]);
 
   useEffect(() => {
     // Fetch dashboard data
@@ -70,8 +69,49 @@ const SuperAdminDashboard = () => {
           },
         ]);
 
-        // Fetch recent admin registrations
-        await fetchRecentAdmins();
+        // Set recent users - could be fetched from API in the future
+        setRecentUsers([
+          {
+            id: 1,
+            name: 'Dr. Emma Johnson',
+            email: 'emma.johnson@example.com',
+            role: 'Doctor',
+            registerDate: '2025-03-08',
+            status: 'Active',
+          },
+          {
+            id: 2,
+            name: 'Sarah Johnson',
+            email: 'sarah.j@example.com',
+            role: 'Patient',
+            registerDate: '2025-03-06',
+            status: 'Active',
+          },
+          {
+            id: 3,
+            name: 'Michael Brown',
+            email: 'michael.b@example.com',
+            role: 'Patient',
+            registerDate: '2025-03-05',
+            status: 'Active',
+          },
+          {
+            id: 4,
+            name: 'Dr. James Wilson',
+            email: 'james.wilson@example.com',
+            role: 'Doctor',
+            registerDate: '2025-03-04',
+            status: 'Pending',
+          },
+          {
+            id: 5,
+            name: 'Emily Davis',
+            email: 'emily.d@example.com',
+            role: 'Patient',
+            registerDate: '2025-03-03',
+            status: 'Active',
+          },
+        ]);
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
       } finally {
@@ -81,41 +121,6 @@ const SuperAdminDashboard = () => {
 
     fetchDashboardData();
   }, []);
-
-  // Fetch recent admin registrations
-  const fetchRecentAdmins = async () => {
-    setAdminsLoading(true);
-    try {
-      const response = await api.get('/api/super/admins');
-      console.log('Recent admins:', response.data);
-      
-      // Map the API response to match our table structure
-      const formattedAdmins = response.data.map(admin => ({
-        id: admin._id,
-        name: `${admin.firstName} ${admin.lastName}`,
-        email: admin.email,
-        role: 'Admin',
-        registerDate: formatDate(admin.createdAt) || 'N/A',
-        status: admin.verified ? 'Active' : 'Pending',
-        gender: admin.gender || 'Not specified'
-      }));
-      
-      setRecentAdmins(formattedAdmins);
-    } catch (error) {
-      console.error('Error fetching admin registrations:', error);
-      setRecentAdmins([]);
-    } finally {
-      setAdminsLoading(false);
-    }
-  };
-
-  // Format date helper function
-  const formatDate = (dateString) => {
-    if (!dateString) return null;
-    const date = new Date(dateString);
-    if (isNaN(date)) return null;
-    return date.toISOString().split('T')[0];
-  };
 
   // Calculate total users
   const totalUsers = stats.totalAdmins + stats.totalPatients + stats.totalDoctors;
@@ -158,8 +163,8 @@ const SuperAdminDashboard = () => {
     },
   ];
 
-  // Columns for recent admins table
-  const adminColumns = [
+  // Columns for recent users table
+  const recentUserColumns = [
     {
       header: 'Name',
       accessor: 'name',
@@ -169,8 +174,25 @@ const SuperAdminDashboard = () => {
       accessor: 'email',
     },
     {
-      header: 'Gender',
-      accessor: 'gender',
+      header: 'Role',
+      accessor: 'role',
+      cell: (row) => {
+        const roleColors = {
+          Doctor: 'bg-indigo-100 text-indigo-800',
+          Patient: 'bg-blue-100 text-blue-800',
+          Admin: 'bg-purple-100 text-purple-800',
+        };
+
+        return (
+          <span className={`px-2 py-1 rounded-full text-xs font-medium ${roleColors[row.role]}`}>
+            {row.role}
+          </span>
+        );
+      },
+    },
+    {
+      header: 'Registration Date',
+      accessor: 'registerDate',
     },
     {
       header: 'Status',
@@ -188,6 +210,16 @@ const SuperAdminDashboard = () => {
           </span>
         );
       },
+    },
+    {
+      header: 'Actions',
+      cell: (row) => (
+        <Link to={`/admin/user/${row.id}`}>
+          <button className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500">
+            View
+          </button>
+        </Link>
+      ),
     },
   ];
 
@@ -305,13 +337,13 @@ const SuperAdminDashboard = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Activity Logs */}
-        {/* <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="bg-white rounded-lg shadow-md p-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-semibold text-gray-900">Recent Activity</h2>
             <Link
-              to="/superadmin/system-logs"
+              to="/admin/system-logs"
               className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500"
             >
               View All Logs
@@ -356,30 +388,30 @@ const SuperAdminDashboard = () => {
               <p>No activity logs found.</p>
             </div>
           )}
-        </div> */}
+        </div>
 
-        {/* Recent Admin Registrations */}
+        {/* Recent User Registrations */}
         <div className="bg-white rounded-lg shadow-md p-6">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold text-gray-900">Recent Admin Registrations</h2>
+            <h2 className="text-xl font-semibold text-gray-900">Recent User Registrations</h2>
             <Link
               to="/superadmin/create-user"
               className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
-              Create Admin
+              Create User
             </Link>
           </div>
 
-          {adminsLoading ? (
+          {loading ? (
             <div className="flex justify-center p-4">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500"></div>
             </div>
-          ) : recentAdmins.length > 0 ? (
+          ) : recentUsers.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    {adminColumns.map((column, index) => (
+                    {recentUserColumns.map((column, index) => (
                       <th
                         key={index}
                         scope="col"
@@ -391,11 +423,11 @@ const SuperAdminDashboard = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {recentAdmins.map((admin) => (
-                    <tr key={admin.id}>
-                      {adminColumns.map((column, index) => (
+                  {recentUsers.map((user) => (
+                    <tr key={user.id}>
+                      {recentUserColumns.map((column, index) => (
                         <td key={index} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {column.cell ? column.cell(admin) : admin[column.accessor]}
+                          {column.cell ? column.cell(user) : user[column.accessor]}
                         </td>
                       ))}
                     </tr>
@@ -405,7 +437,7 @@ const SuperAdminDashboard = () => {
             </div>
           ) : (
             <div className="text-center py-6 text-gray-500">
-              <p>No admin registrations found.</p>
+              <p>No recent user registrations.</p>
             </div>
           )}
         </div>
@@ -414,4 +446,4 @@ const SuperAdminDashboard = () => {
   );
 };
 
-export default SuperAdminDashboard;
+export default AdminDashboard;
