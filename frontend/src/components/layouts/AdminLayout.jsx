@@ -1,5 +1,5 @@
 import { Outlet } from 'react-router-dom';
-import Sidebar from '../../components/common/Sidebar';
+import SideBar from '../../components/common/SideBar.jsx';
 import Header from '../../components/common/Header';
 // import { useAuth } from '../contexts/AuthContext';
 
@@ -18,7 +18,7 @@ const AdminLayout = () => {
 
   return (
     <div className="flex h-screen bg-gray-100">
-      <Sidebar items={sidebarItems} />
+      <SideBar items={sidebarItems} />
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header 
           userType="Hospital Admin" 

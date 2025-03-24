@@ -1,5 +1,5 @@
 import { Outlet } from 'react-router-dom';
-import Sidebar from '../../components/common/Sidebar.jsx';
+import SideBar from '../../components/common/SideBar.jsx';
 import Header from '../../components/common/Header.jsx';
 // import { useAuth } from '../contexts/AuthContext';
 
