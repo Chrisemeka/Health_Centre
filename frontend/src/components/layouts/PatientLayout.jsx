@@ -1,6 +1,6 @@
 import { Outlet } from 'react-router-dom';
-import Sidebar from '../../components/common/Sidebar';
-import Header from '../../components/common/Header';
+import Sidebar from '../../components/common/Sidebar.jsx';
+import Header from '../../components/common/Header.jsx';
 // import { useAuth } from '../contexts/AuthContext';
 
 const PatientLayout = () => {
