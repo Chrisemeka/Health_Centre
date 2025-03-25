@@ -40,6 +40,7 @@ import AdminLayout from './components/layouts/AdminLayout';
 import CreateUser from './pages/super/CreateUser';
 import SystemLogs from './pages/admin/SystemLogs';
 import CreateDoctor from './pages/admin/CreateDoctor';
+import Logout from './pages/auth/Logout';
 
 
 
@@ -57,6 +58,7 @@ function App() {
           <Route path="/doctor/login" element={<DoctorLogin />} />
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/logout" element={<Logout />} />
           <Route path="*" element={<Error404 />} />
         </Route>
 

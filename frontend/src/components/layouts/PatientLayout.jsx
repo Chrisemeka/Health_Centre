@@ -11,6 +11,7 @@ const PatientLayout = () => {
     { label: 'Appointments', path: '/patient/appointments', icon: 'calendar' },
     { label: 'Medical Records', path: '/patient/medical-records', icon: 'folder-open' },
     { label: 'My Profile', path: '/patient/profile', icon: 'user' },
+    { label: 'Logout', path: '/logout', icon: 'logout' },
   ];
 
   return (

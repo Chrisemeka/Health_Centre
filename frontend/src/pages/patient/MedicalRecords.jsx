@@ -7,10 +7,7 @@ const MedicalRecords = () => {
   const [filteredRecords, setFilteredRecords] = useState([]);
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
-  const [isAccessLogModalOpen, setIsAccessLogModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState('all');
-  const [accessLogs, setAccessLogs] = useState([]);
   const [error, setError] = useState(null);
 
   useEffect(() => {
@@ -47,55 +44,27 @@ const MedicalRecords = () => {
     fetchMedicalRecords();
   }, []);
 
-  // useEffect(() => {
-  //   // Filter records based on search term and type filter
-  //   const filtered = records.filter(record => {
-  //     const matchesSearch = 
-  //       record.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
-  //       (record.hospital && record.hospital.toLowerCase().includes(searchTerm.toLowerCase())) ||
-  //       (record.doctor && record.doctor.toLowerCase().includes(searchTerm.toLowerCase())) ||
-  //       (record.summary && record.summary.toLowerCase().includes(searchTerm.toLowerCase())
-  //   )
-      
-  //     const matchesType = filterType === 'all' || record.type === filterType;
-      
-  //     return matchesSearch && matchesType;
-  //   });
+  useEffect(() => {
+    // Filter records based on search term
+    const filtered = records.filter(record => {
+      return (
+        (record.hospital && record.hospital.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (record.doctor && record.doctor.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (record.summary && record.summary.toLowerCase().includes(searchTerm.toLowerCase()))
+      );
+    });
     
-  //   setFilteredRecords(filtered);
-  // }, [searchTerm, filterType, records]);
+    setFilteredRecords(filtered);
+  }, [searchTerm, records]);
 
   const handleSearch = (e) => {
     setSearchTerm(e.target.value);
-  };
-
-  const handleFilterChange = (e) => {
-    setFilterType(e.target.value);
   };
 
   const handleViewRecord = (record) => {
     setSelectedRecord(record);
     setIsViewModalOpen(true);
   };
-
-  const handleViewAccessLog = async (record) => {
-    setSelectedRecord(record);
-    
-    try {
-      setLoading(true);
-      const response = await api.get(`/api/patient/medical-records/${record.id}/access-logs`);
-      setAccessLogs(response.data);
-      setIsAccessLogModalOpen(true);
-    } catch (error) {
-      console.error('Error fetching access logs:', error);
-      setError('Failed to load access logs. Please try again later.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Get unique record types for filter dropdown
-  const recordTypes = ['all', ...new Set(records.map(record => record.type))];
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -110,7 +79,7 @@ const MedicalRecords = () => {
           </div>
         )}
 
-        {/* Filters Section */}
+        {/* Search Section */}
         <div className="bg-white shadow-md rounded-lg p-6 mb-6">
           <div className="flex flex-col md:flex-row gap-4 md:items-end">
             <div className="flex-1">
@@ -120,29 +89,11 @@ const MedicalRecords = () => {
               <input
                 id="search"
                 type="text"
-                placeholder="Search by type, hospital, doctor, or summary..."
+                placeholder="Search by hospital, doctor, or summary..."
                 value={searchTerm}
                 onChange={handleSearch}
                 className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-teal-500 focus:border-teal-500 sm:text-sm"
               />
-            </div>
-            <div className="md:w-1/4">
-              <label htmlFor="recordType" className="block text-sm font-medium text-gray-700">
-                Filter by Type
-              </label>
-              <select
-                id="recordType"
-                name="recordType"
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-teal-500 focus:border-teal-500 sm:text-sm"
-                value={filterType}
-                onChange={handleFilterChange}
-              >
-                {recordTypes.map((type) => (
-                  <option key={type} value={type}>
-                    {type === 'all' ? 'All Types' : type}
-                  </option>
-                ))}
-              </select>
             </div>
           </div>
         </div>
@@ -158,18 +109,15 @@ const MedicalRecords = () => {
             <table className="min-w-full divide-y divide-gray-200">
               <thead>
                 <tr>
-                  <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Type
-                  </th>
-                  <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  {/* <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Hospital
-                  </th>
+                  </th> */}
                   <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Date
                   </th>
-                  <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  {/* <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Doctor
-                  </th>
+                  </th> */}
                   <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Summary
                   </th>
@@ -181,48 +129,25 @@ const MedicalRecords = () => {
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredRecords.map((record) => (
                   <tr key={record.id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        record.type === 'Laboratory Results' ? 'bg-blue-100 text-blue-800' :
-                        record.type === 'Prescription' ? 'bg-green-100 text-green-800' :
-                        record.type === 'Diagnosis' ? 'bg-purple-100 text-purple-800' :
-                        record.type === 'Imaging' ? 'bg-amber-100 text-amber-800' :
-                        record.type === 'Vaccination' ? 'bg-teal-100 text-teal-800' :
-                        record.type === 'Surgery' ? 'bg-red-100 text-red-800' :
-                        record.type === 'Consultation' ? 'bg-indigo-100 text-indigo-800' :
-                        record.type === 'Physical Examination' ? 'bg-cyan-100 text-cyan-800' :
-                        'bg-gray-100 text-gray-800'
-                      }`}>
-                        {record.type}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {/* <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {record.hospital || 'N/A'}
-                    </td>
+                    </td> */}
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {new Date(record.date).toLocaleDateString()}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {/* <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {record.doctor || 'N/A'}
-                    </td>
+                    </td> */}
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {record.summary || 'No summary available'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      <div className="flex space-x-2">
-                        <button
-                          onClick={() => handleViewRecord(record)}
-                          className="px-3 py-1 bg-teal-600 text-white rounded-md hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500"
-                        >
-                          View
-                        </button>
-                        <button
-                          onClick={() => handleViewAccessLog(record)}
-                          className="px-3 py-1 bg-gray-600 text-white rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500"
-                        >
-                          Access Log
-                        </button>
-                      </div>
+                      <button
+                        onClick={() => handleViewRecord(record)}
+                        className="px-3 py-1 bg-teal-600 text-white rounded-md hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                      >
+                        View
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -254,21 +179,17 @@ const MedicalRecords = () => {
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <p className="text-sm font-medium text-gray-500">Type</p>
-                      <p className="mt-1">{selectedRecord.type}</p>
-                    </div>
-                    <div>
                       <p className="text-sm font-medium text-gray-500">Date</p>
                       <p className="mt-1">{new Date(selectedRecord.date).toLocaleDateString()}</p>
                     </div>
-                    <div>
+                    {/* <div>
                       <p className="text-sm font-medium text-gray-500">Hospital</p>
                       <p className="mt-1">{selectedRecord.hospital || 'N/A'}</p>
-                    </div>
-                    <div>
+                    </div> */}
+                    {/* <div>
                       <p className="text-sm font-medium text-gray-500">Doctor</p>
                       <p className="mt-1">{selectedRecord.doctor || 'N/A'}</p>
-                    </div>
+                    </div> */}
                   </div>
                   
                   <div>
@@ -298,101 +219,6 @@ const MedicalRecords = () => {
                         </a>
                       </div>
                     </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Access Log Modal */}
-        {isAccessLogModalOpen && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-lg shadow-lg w-full max-w-2xl p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold text-gray-900">
-                  {selectedRecord ? `Access Log - ${selectedRecord.type}` : 'Access Log'}
-                </h2>
-                <button
-                  onClick={() => setIsAccessLogModalOpen(false)}
-                  className="text-gray-500 hover:text-gray-700 focus:outline-none"
-                >
-                  <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-              {selectedRecord && (
-                <div className="space-y-4">
-                  <div className="bg-gray-50 p-4 rounded-md mb-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-sm font-medium text-gray-500">Record Type</p>
-                        <p className="mt-1 font-medium">{selectedRecord.type}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-500">Date</p>
-                        <p className="mt-1">{new Date(selectedRecord.date).toLocaleDateString()}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-500">Hospital</p>
-                        <p className="mt-1">{selectedRecord.hospital || 'N/A'}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-500">Summary</p>
-                        <p className="mt-1">{selectedRecord.summary || 'No summary available'}</p>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <p className="text-lg font-medium">Access History</p>
-                  
-                  {accessLogs.length > 0 ? (
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead>
-                        <tr>
-                          <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Doctor
-                          </th>
-                          <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Hospital
-                          </th>
-                          <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Action
-                          </th>
-                          <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Timestamp
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        {accessLogs.map((log) => (
-                          <tr key={log.id}>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {log.doctor || 'N/A'}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {log.hospital || 'N/A'}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                log.action === 'Viewed' ? 'bg-blue-100 text-blue-800' :
-                                log.action === 'Updated' ? 'bg-amber-100 text-amber-800' :
-                                log.action === 'Created' ? 'bg-green-100 text-green-800' :
-                                'bg-gray-100 text-gray-800'
-                              }`}>
-                                {log.action}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                              {new Date(log.timestamp).toLocaleString()}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  ) : (
-                    <p className="text-gray-500">No access logs available for this record.</p>
                   )}
                 </div>
               )}

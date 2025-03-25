@@ -12,7 +12,22 @@ const PatientDashboard = () => {
     confirmedAppointments: 0,
     unreadNotifications: 0
   });
-  
+  const formatDate = (dateString) => {
+    if (!dateString) return 'Not specified';
+    
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        weekday: 'long'
+      });
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return dateString; // Return the original string if formatting fails
+    }
+  };
   // For upcoming appointments
   const [appointments, setAppointments] = useState([]);
   
@@ -26,6 +41,26 @@ const PatientDashboard = () => {
     fetchDashboardData();
   }, []);
 
+  const fetchDoctors = async () => {
+    try {
+      const response = await api.get('/api/patient/doctor');
+      return response.data || [];
+    } catch (error) {
+      console.error('Error fetching doctors:', error);
+      return [];
+    }
+  };
+  
+  const fetchHospitals = async () => {
+    try {
+      const response = await api.get('/api/patient/hospitals');
+      return response.data || [];
+    } catch (error) {
+      console.error('Error fetching hospitals:', error);
+      return [];
+    }
+  };
+
   const fetchDashboardData = async () => {
     setLoading(true);
     
@@ -36,19 +71,43 @@ const PatientDashboard = () => {
         const user = JSON.parse(userData);
         setUser(user);
       }
-
+  
       // Fetch data in parallel
       const [
-        appointmentsResponse
+        appointmentsResponse,
+        doctorsResponse,
+        hospitalsResponse
       ] = await Promise.all([
-        api.get('/api/patient/appointments')
+        api.get('/api/patient/appointments'),
+        fetchDoctors(),
+        fetchHospitals()
       ]);
-
+  
       // Set appointments (all appointments)
       const allAppointments = appointmentsResponse.data || [];
+      const doctors = doctorsResponse || [];
+      const hospitals = hospitalsResponse || [];
+      
+      // Create mappings for quick lookup
+      const doctorMap = {};
+      doctors.forEach(doctor => {
+        doctorMap[doctor._id] = `${doctor.firstName} ${doctor.lastName}`;
+      });
+      
+      const hospitalMap = {};
+      hospitals.forEach(hospital => {
+        hospitalMap[hospital._id] = hospital.name;
+      });
+      
+      // Enhance appointments with doctor and hospital names
+      const enhancedAppointments = allAppointments.map(appointment => ({
+        ...appointment,
+        doctorName: appointment.doctorId ? doctorMap[appointment.doctorId] : 'Not specified',
+        hospitalName: appointment.hospitalId ? hospitalMap[appointment.hospitalId] : 'Not specified'
+      }));
       
       // Filter for confirmed appointments
-      const confirmedAppointments = allAppointments.filter(
+      const confirmedAppointments = enhancedAppointments.filter(
         appointment => appointment.status === 'Confirmed' || appointment.status === 'confirmed'
       );
       
@@ -65,7 +124,7 @@ const PatientDashboard = () => {
       const today = new Date();
       today.setHours(0, 0, 0, 0); // Set to beginning of the day for proper comparison
       
-      const upcomingAppointments = allAppointments.filter(appointment => {
+      const upcomingAppointments = enhancedAppointments.filter(appointment => {
         if (!appointment.date) return false;
         const appointmentDate = new Date(appointment.date);
         appointmentDate.setHours(0, 0, 0, 0); // Set to beginning of the day for proper comparison
@@ -94,8 +153,8 @@ const PatientDashboard = () => {
         
         return {
           id: index + 1,
-          message: `Upcoming appointment with ${appointment.doctorName || appointment.doctorId || 'Doctor'} at ${appointment.hospitalName || appointment.hospital || 'Hospital'}`,
-          time: `${timeString} (${appointment.date || 'Date not set'} at ${appointment.time || 'Time not set'})`,
+          message: `Upcoming appointment with ${appointment.doctorName}`,
+          time: `${timeString} (${formatDate(appointment.date)} at ${appointment.time || 'Time not set'})`,
           read: false,
           appointmentId: appointment._id || appointment.id
         };
@@ -105,13 +164,6 @@ const PatientDashboard = () => {
       
       // Set stats - using the calculated confirmed count
       setStats({
-        totalAppointments: allAppointments.length,
-        totalRecords: records.length,
-        confirmedAppointments: confirmedCount,
-        unreadNotifications: appointmentNotifications.filter(n => !n.read).length
-      });
-      
-      console.log('Stats updated:', {
         totalAppointments: allAppointments.length,
         totalRecords: records.length,
         confirmedAppointments: confirmedCount,
@@ -132,39 +184,6 @@ const PatientDashboard = () => {
       setLoading(false);
     }
   };
-
-  // Mark notification as read
-  // const handleMarkAsRead = (notificationId) => {
-  //   setNotifications(
-  //     notifications.map((notification) =>
-  //       notification.id === notificationId
-  //         ? { ...notification, read: true }
-  //         : notification
-  //     )
-  //   );
-    
-  //   // Update the unread notifications count in stats
-  //   setStats({
-  //     ...stats,
-  //     unreadNotifications: notifications.filter(n => !n.read && n.id !== notificationId).length
-  //   });
-  // };
-
-  // Mark all notifications as read
-  // const handleMarkAllAsRead = () => {
-  //   setNotifications(
-  //     notifications.map((notification) => ({
-  //       ...notification,
-  //       read: true,
-  //     }))
-  //   );
-    
-  //   // Update the unread notifications count in stats
-  //   setStats({
-  //     ...stats,
-  //     unreadNotifications: 0
-  //   });
-  // };
 
   // Format user name safely
   const getUserName = () => {
@@ -229,7 +248,7 @@ const PatientDashboard = () => {
           </div>
         </div>
 
-        {/* Upcoming Appointments */}
+        {/* confirmed Appointments */}
         <div className="bg-white shadow-md rounded-lg p-6 mt-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold text-gray-900">Confirmed Appointments</h2>
@@ -251,9 +270,6 @@ const PatientDashboard = () => {
                     Doctor
                   </th>
                   <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Hospital
-                  </th>
-                  <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Date
                   </th>
                   <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -271,13 +287,10 @@ const PatientDashboard = () => {
                 {appointments.map((appointment, index) => (
                   <tr key={appointment._id || appointment.id || index}>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {appointment.doctorName || appointment.doctorId || 'Not specified'}
+                      {appointment.doctorName}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {appointment.hospitalName || appointment.hospital || 'Not specified'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {appointment.date || 'Not specified'}
+                      {formatDate(appointment.date)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {appointment.time || 'Not specified'}

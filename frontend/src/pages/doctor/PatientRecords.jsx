@@ -17,7 +17,6 @@ const PatientRecords = () => {
   const [records, setRecords] = useState([]);
   const [filteredRecords, setFilteredRecords] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState('all');
   
   // View record state
   const [selectedRecord, setSelectedRecord] = useState(null);
@@ -33,11 +32,10 @@ const PatientRecords = () => {
   // Add record state
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [recordForm, setRecordForm] = useState({
-    type: '',
     summary: '',
     details: '',
-    fileUpload: null,
-    imageUpload: [],
+    documentUrl: '',
+    imageUrls: [],
     otp: ''
   });
   const [formErrors, setFormErrors] = useState({});
@@ -129,11 +127,10 @@ const PatientRecords = () => {
   const handleAddRecord = async () => {
     // Reset the form
     setRecordForm({
-      type: '',
       summary: '',
       details: '',
-      fileUpload: null,
-      imageUpload: [],
+      documentUrl: '',
+      imageUrls: [],
       otp: ''
     });
     setFormErrors({});
@@ -170,10 +167,10 @@ const PatientRecords = () => {
   // Handle form input changes
   const handleFormChange = (e) => {
     const { name, value, files } = e.target;
-    if (name === 'fileUpload') {
-      setRecordForm({...recordForm, fileUpload: files[0]});
-    } else if (name === 'imageUpload') {
-      setRecordForm({...recordForm, imageUpload: files});
+    if (name === 'documentUrl') {
+      setRecordForm({...recordForm, documentUrl: files[0]});
+    } else if (name === 'imageUrls') {
+      setRecordForm({...recordForm, imageUrls: files});
     } else {
       setRecordForm({...recordForm, [name]: value});
     }
@@ -186,7 +183,6 @@ const PatientRecords = () => {
   // Validate add record form
   const validateRecordForm = () => {
     const errors = {};
-    if (!recordForm.type) errors.type = 'Record type is required';
     if (!recordForm.summary.trim()) errors.summary = 'Summary is required';
     if (!recordForm.details.trim()) errors.details = 'Details are required';
     if (!recordForm.otp.trim()) errors.otp = 'OTP is required';
@@ -194,86 +190,85 @@ const PatientRecords = () => {
   };
 
   // Submit add record form
-  const handleAddRecordSubmit = async (e) => {
-    e.preventDefault();
+  // 1. Update the handleAddRecordSubmit function to upload to Cloudinary
+
+const handleAddRecordSubmit = async (e) => {
+  e.preventDefault();
+  
+  // Validate form
+  const errors = validateRecordForm();
+  if (Object.keys(errors).length > 0) {
+    setFormErrors(errors);
+    return;
+  }
+  
+  try {
+    // Handle file uploads first if needed
+    let documentUrl = '';
+    let imageUrls = [];
     
-    // Validate form
-    const errors = validateRecordForm();
-    if (Object.keys(errors).length > 0) {
-      setFormErrors(errors);
-      return;
+    // If there's a document file, upload it to Cloudinary
+    if (recordForm.documentUrl) {
+      const documentFormData = new FormData();
+      documentFormData.append('file', recordForm.documentUrl);
+      documentFormData.append('upload_preset', 'emekatife'); // Set your Cloudinary upload preset here
+      
+      const cloudinaryResponse = await fetch('https://api.cloudinary.com/v1_1/delbvognh/auto/upload', {
+        method: 'POST',
+        body: documentFormData
+      });
+      
+      const documentData = await cloudinaryResponse.json();
+      documentUrl = documentData.secure_url;
     }
     
-    try {
-      // Handle file uploads first if needed
-      let documentUrl = null;
-      let imageUrls = [];
-      
-      // If there's a document file, upload it first
-      if (recordForm.fileUpload) {
-        const documentFormData = new FormData();
-        documentFormData.append('file', recordForm.fileUpload);
+    // If there are image files, upload them to Cloudinary
+    if (recordForm.imageUrls && recordForm.imageUrls.length > 0) {
+      for (let i = 0; i < recordForm.imageUrls.length; i++) {
+        const imageFormData = new FormData();
+        imageFormData.append('file', recordForm.imageUrls[i]);
+        imageFormData.append('upload_preset', 'emekatife'); // Set your Cloudinary upload preset here
         
-        const documentResponse = await api.post('/api/uploads/document', documentFormData, {
-          headers: {
-            'Content-Type': 'multipart/form-data'
-          }
+        const cloudinaryResponse = await fetch('https://api.cloudinary.com/v1_1/delbvognh/image/upload', {
+          method: 'POST',
+          body: imageFormData
         });
         
-        documentUrl = documentResponse.data.url;
-      }
-      
-      // If there are image files, upload them
-      if (recordForm.imageUpload && recordForm.imageUpload.length > 0) {
-        for (let i = 0; i < recordForm.imageUpload.length; i++) {
-          const imageFormData = new FormData();
-          imageFormData.append('file', recordForm.imageUpload[i]);
-          
-          const imageResponse = await api.post('/api/uploads/image', imageFormData, {
-            headers: {
-              'Content-Type': 'multipart/form-data'
-            }
-          });
-          
-          imageUrls.push(imageResponse.data.url);
-        }
-      }
-      
-      // Prepare the data object
-      const recordData = {
-        otp: recordForm.otp,
-        recordType: recordForm.type,
-        summary: recordForm.summary,
-        details: recordForm.details,
-        documentUrl: documentUrl,
-        imageUrls: imageUrls
-      };
-      
-      // Now send the record data with the file URLs using JSON.stringify
-      const response = await api.post(
-        `/api/doctor/patients/${patientId}/records/add`, 
-        JSON.stringify(recordData), // This is the key change
-        {
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-      
-      // Update records and close modal
-      setRecords([response.data.record, ...records]);
-      setFilteredRecords([response.data.record, ...filteredRecords]);
-      setIsAddModalOpen(false);
-      alert('Record added successfully.');
-    } catch (error) {
-      console.error('Error adding record:', error);
-      if (error.response && error.response.status === 401) {
-        setFormErrors({otp: 'Invalid OTP. Please try again with a valid OTP.'});
-      } else {
-        setFormErrors({general: 'Failed to add record. Please try again.'});
+        const imageData = await cloudinaryResponse.json();
+        imageUrls.push(imageData.secure_url);
       }
     }
-  };
+    
+    // Prepare the data object with Cloudinary URLs
+    const recordData = {
+      otp: recordForm.otp,
+      summary: recordForm.summary,
+      details: recordForm.details,
+      documentUrl: documentUrl,
+      imageUrls: imageUrls
+    };
+    
+    // Send the record data with the Cloudinary URLs
+    const response = await api.post(
+      `/api/doctor/patients/${patientId}/records/add`, 
+      JSON.stringify(recordData),
+      {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+    
+    // Update records and close modal
+    setRecords([response.data.record, ...records]);
+    setFilteredRecords([response.data.record, ...filteredRecords]);
+    setIsAddModalOpen(false);
+    alert('Record added successfully.');
+  } catch (error) {
+    console.error('Error adding record:', error);
+    setFormErrors({general: 'Failed to add record. Please try again.'});
+  }
+};
 
   // Patient search functionality
   useEffect(() => {
@@ -298,22 +293,19 @@ const PatientRecords = () => {
     return () => clearTimeout(debounceTimeout);
   }, [patientId, patientSearchTerm]);
 
-  // Filter records based on search term and filter type
+  // Filter records based on search term
   useEffect(() => {
     if (!records.length) return;
     const filtered = records.filter(record => {
-      const matchesSearch = 
-        (record.type?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      return (
         record.summary?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         record.details?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        record.doctor?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        record.hospital?.toLowerCase().includes(searchTerm.toLowerCase()));
-      
-      const matchesType = filterType === 'all' || record.type === filterType;
-      return matchesSearch && matchesType;
+        record.documentUrl?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (record.imageUrls && record.imageUrls.some(url => url.toLowerCase().includes(searchTerm.toLowerCase())))
+      );
     });
     setFilteredRecords(filtered);
-  }, [searchTerm, filterType, records]);
+  }, [searchTerm, records]);
 
   // Format date utility function
   const formatDate = (dateString) => {
@@ -338,11 +330,6 @@ const PatientRecords = () => {
     }
     setIsViewModalOpen(true);
   };
-
-  // Get unique record types for filter dropdown
-  const recordTypes = records.length 
-    ? ['all', ...new Set(records.filter(r => r.type).map(r => r.type))] 
-    : ['all'];
 
   return (
     <div className="space-y-6">
@@ -479,19 +466,6 @@ const PatientRecords = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-teal-500 focus:border-teal-500 sm:text-sm"
                 />
               </div>
-              <div className="md:w-1/4">
-                <select
-                  className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-teal-500 focus:border-teal-500 sm:text-sm rounded-md"
-                  value={filterType}
-                  onChange={(e) => setFilterType(e.target.value)}
-                >
-                  {recordTypes.map((type) => (
-                    <option key={type} value={type}>
-                      {type === 'all' ? 'All Types' : type}
-                    </option>
-                  ))}
-                </select>
-              </div>
             </div>
           </div>
 
@@ -506,8 +480,10 @@ const PatientRecords = () => {
                   <thead className="bg-gray-50">
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Summary</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Details</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Document</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Images</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                     </tr>
                   </thead>
@@ -517,19 +493,43 @@ const PatientRecords = () => {
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           {formatDate(record.createdAt || record.date)}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            record.type === 'Laboratory Results' ? 'bg-blue-100 text-blue-800' :
-                            record.type === 'Prescription' ? 'bg-green-100 text-green-800' :
-                            record.type === 'Diagnosis' ? 'bg-yellow-100 text-yellow-800' :
-                            record.type === 'Imaging' ? 'bg-purple-100 text-purple-800' :
-                            'bg-gray-100 text-gray-800'
-                          }`}>
-                            {record.type}
-                          </span>
-                        </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           {record.summary}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-900">
+                          {record.details ? `${record.details.substring(0, 50)}...` : 'No details'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {record.documentUrl ? (
+                            <a 
+                              href={record.documentUrl} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-teal-600 hover:text-teal-800"
+                            >
+                              View
+                            </a>
+                          ) : 'None'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {record.imageUrls && record.imageUrls.length > 0 ? (
+                            <div className="flex space-x-1">
+                              {record.imageUrls.slice(0, 2).map((url, index) => (
+                                <a 
+                                  key={index} 
+                                  href={url} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="text-teal-600 hover:text-teal-800"
+                                >
+                                  Image {index + 1}
+                                </a>
+                              ))}
+                              {record.imageUrls.length > 2 && (
+                                <span className="text-gray-500">+{record.imageUrls.length - 2} more</span>
+                              )}
+                            </div>
+                          ) : 'None'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm">
                           <button
@@ -601,7 +601,6 @@ const PatientRecords = () => {
       )}
 
       {/* Add Record Modal */}
-      {/* Add Record Modal */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
           <div className="bg-white rounded-lg shadow-lg w-full max-w-2xl">
@@ -669,31 +668,6 @@ const PatientRecords = () => {
                 </p>
               </div>
               
-              {/* Record Type */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Record Type <span className="text-red-500">*</span>
-                </label>
-                <select
-                  name="type"
-                  value={recordForm.type}
-                  onChange={handleFormChange}
-                  className={`mt-1 block w-full px-3 py-2 border ${
-                    formErrors.type ? 'border-red-300' : 'border-gray-300'
-                  } rounded-md shadow-sm focus:outline-none focus:ring-teal-500 focus:border-teal-500 sm:text-sm`}
-                >
-                  <option value="">Select a type</option>
-                  <option value="Laboratory Results">Laboratory Results</option>
-                  <option value="Prescription">Prescription</option>
-                  <option value="Diagnosis">Diagnosis</option>
-                  <option value="Visit Notes">Visit Notes</option>
-                  <option value="Imaging">Imaging</option>
-                </select>
-                {formErrors.type && (
-                  <p className="mt-1 text-sm text-red-600">{formErrors.type}</p>
-                )}
-              </div>
-              
               {/* Summary */}
               <div>
                 <label className="block text-sm font-medium text-gray-700">
@@ -734,14 +708,14 @@ const PatientRecords = () => {
                 )}
               </div>
               
-              {/* File Upload */}
+              {/* Document Upload */}
               <div>
                 <label className="block text-sm font-medium text-gray-700">
                   Upload Document (Optional)
                 </label>
                 <input
                   type="file"
-                  name="fileUpload"
+                  name="documentUrl"
                   onChange={handleFormChange}
                   className="mt-1 block w-full text-sm text-gray-500
                     file:mr-4 file:py-2 file:px-4
@@ -759,7 +733,7 @@ const PatientRecords = () => {
                 </label>
                 <input
                   type="file"
-                  name="imageUpload"
+                  name="imageUrls"
                   multiple
                   onChange={handleFormChange}
                   className="mt-1 block w-full text-sm text-gray-500
@@ -802,10 +776,6 @@ const PatientRecords = () => {
             <div className="p-6 space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm font-medium text-gray-500">Type</p>
-                  <p className="mt-1">{selectedRecord.type}</p>
-                </div>
-                <div>
                   <p className="text-sm font-medium text-gray-500">Date</p>
                   <p className="mt-1">{formatDate(selectedRecord.createdAt || selectedRecord.date)}</p>
                 </div>
@@ -821,16 +791,36 @@ const PatientRecords = () => {
                 <p className="mt-1">{selectedRecord.details}</p>
               </div>
               
-              {selectedRecord.fileUrl && (
+              {selectedRecord.documentUrl && (
                 <div className="pt-4 border-t border-gray-200">
+                  <p className="text-sm font-medium text-gray-500">Document</p>
                   <a
-                    href={selectedRecord.fileUrl}
+                    href={selectedRecord.documentUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
                   >
                     View Document
                   </a>
+                </div>
+              )}
+              
+              {selectedRecord.imageUrls && selectedRecord.imageUrls.length > 0 && (
+                <div className="pt-4 border-t border-gray-200">
+                  <p className="text-sm font-medium text-gray-500">Images</p>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {selectedRecord.imageUrls.map((url, index) => (
+                      <a
+                        key={index}
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center px-3 py-1 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                      >
+                        Image {index + 1}
+                      </a>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>

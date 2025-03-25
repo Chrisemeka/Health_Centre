@@ -10,6 +10,7 @@ const AdminLayout = () => {
     { label: 'Dashboard', path: '/admin/dashboard', icon: 'dashboard' },
     { label: 'Doctors', path: '/admin/create-doctor', icon: 'user' },
     { label: 'Hospitals', path: '/admin/hospitals', icon: 'dashboard' },
+    { label: 'Logout', path: '/logout', icon: 'logout' },
     // { label: 'Patients', path: '/admin/patients', icon: 'users' },
     // { label: 'Appointments', path: '/admin/appointments', icon: 'calendar' },
     // { label: 'Reports', path: '/admin/system-logs', icon: 'clipboard-list' },

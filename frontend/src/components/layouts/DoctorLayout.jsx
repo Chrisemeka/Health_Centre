@@ -10,6 +10,7 @@ const DoctorLayout = () => {
     { label: 'Dashboard', path: '/doctor/dashboard', icon: 'dashboard' },
     { label: 'Appointments', path: '/doctor/appointments', icon: 'calendar' },
     { label: 'Patient Records', path: '/doctor/patient-records', icon: 'folder-open' },
+    { label: 'Logout', path: '/logout', icon: 'logout' },
   ];
 
   return (
